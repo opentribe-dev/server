@@ -1,15 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { ModelPolicySchema } from '@opencrew/protocol';
 import { requireAuth } from '../auth/middleware.js';
 import { createAgent, listAgentsForOwner } from './repository.js';
 
 const CreateAgentBodySchema = z.object({
   name: z.string().min(1),
   personality: z.string().default(''),
-  modelPolicy: z.object({
-    defaultProviderId: z.string().min(1),
-    defaultModel: z.string().min(1),
-  }),
+  modelPolicy: ModelPolicySchema,
 });
 
 export function registerAgentRoutes(app: FastifyInstance): void {

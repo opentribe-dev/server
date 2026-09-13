@@ -1,0 +1,23 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import { openDatabase } from './connection.js';
+
+describe('openDatabase', () => {
+  let dataDir: string;
+
+  afterEach(() => {
+    if (dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  it('creates the data directory and an opencrew.db file in WAL mode', () => {
+    dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencrew-db-'));
+    const nestedDir = path.join(dataDir, 'nested');
+    const db = openDatabase(nestedDir);
+    expect(fs.existsSync(path.join(nestedDir, 'opencrew.db'))).toBe(true);
+    const mode = db.pragma('journal_mode', { simple: true });
+    expect(mode).toBe('wal');
+    db.close();
+  });
+});

@@ -1,0 +1,31 @@
+{
+  "name": "@opencrew/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@opencrew/protocol": "file:../protocol",
+    "fastify": "^5.1.0",
+    "@fastify/websocket": "^11.0.1",
+    "better-sqlite3": "^11.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "tsx": "^4.19.1",
+    "ws": "^8.18.0",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/ws": "^8.5.12",
+    "@types/node": "^22.7.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

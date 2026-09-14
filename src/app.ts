@@ -3,14 +3,18 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type Database from 'better-sqlite3';
 import { ZodError } from 'zod';
 import { registerAgentRoutes } from './agents/routes.js';
+import { registerApprovalRoutes } from './approvals/routes.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerConversationRoutes } from './conversations/routes.js';
 import { registerMessageRoutes } from './messages/routes.js';
+import { defaultRespond, type RespondFn } from './runtime/engine.js';
+import { registerRuntimeRoutes } from './runtime/routes.js';
 import { ConnectionHub } from './ws/hub.js';
 import { registerWsRoutes } from './ws/routes.js';
 
 export interface BuildAppOptions {
   db: Database.Database;
+  respond?: RespondFn;
 }
 
 export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> {
@@ -32,6 +36,8 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
   registerAgentRoutes(app);
   registerConversationRoutes(app);
   registerMessageRoutes(app, hub);
+  registerRuntimeRoutes(app, hub, opts.respond ?? defaultRespond);
+  registerApprovalRoutes(app);
   registerWsRoutes(app, hub);
 
   return app;

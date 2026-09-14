@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AgentdBackedProviderClient } from './agentd-stub.js';
 import { AnthropicClient } from './anthropic.js';
 import { OpenAICompatibleClient } from './openai-compatible.js';
@@ -32,6 +32,26 @@ describe('resolveProviderClient', () => {
       const client = resolveProviderClient({ id: 'x', kind, apiKey: null, baseUrl: null, createdAt: '', updatedAt: '' });
       expect(client).toBeInstanceOf(AgentdBackedProviderClient);
     }
+  });
+
+  it('forwards config.baseUrl through for anthropic-kind providers', async () => {
+    const fakeFetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            content: [{ type: 'text', text: 'hi' }],
+            stop_reason: 'end_turn',
+            usage: { input_tokens: 1, output_tokens: 1 },
+          }),
+          { status: 200 }
+        )
+    );
+    const client = resolveProviderClient(
+      { id: 'a', kind: 'anthropic', apiKey: 'sk-test', baseUrl: 'https://custom.anthropic.example', createdAt: '', updatedAt: '' },
+      fakeFetch as unknown as typeof fetch
+    );
+    await client.chat({ providerId: 'a', model: 'claude-sonnet-5', messages: [{ role: 'user', content: 'hi' }] });
+    expect(fakeFetch).toHaveBeenCalledWith('https://custom.anthropic.example/v1/messages', expect.anything());
   });
 
   it('throws a plain config error (not a ProviderError) when a remote provider has no api key', () => {

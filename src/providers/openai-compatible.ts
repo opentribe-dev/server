@@ -50,6 +50,9 @@ export class OpenAICompatibleClient implements ProviderClient {
     }
 
     const data = (await response.json()) as OpenAiChatResponseBody;
+    if (!data.choices || data.choices.length === 0) {
+      throw new ProviderUnavailableError(`${this.kind} returned no choices`);
+    }
     const choice = data.choices[0];
     return {
       providerId: request.providerId,

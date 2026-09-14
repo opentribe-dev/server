@@ -114,6 +114,66 @@ describe('provider routes', () => {
     await app.close();
   });
 
+  it('rejects creating a remote-kind provider with no apiKey (400, not 201)', async () => {
+    const app = await buildApp({ db });
+    const token = await setupOwner(app);
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/providers',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { id: 'anthropic-default', kind: 'anthropic' },
+    });
+    expect(create.statusCode).toBe(400);
+
+    await app.close();
+  });
+
+  it('rejects creating an openai-compatible provider with an apiKey but no baseUrl (400, not 201)', async () => {
+    const app = await buildApp({ db });
+    const token = await setupOwner(app);
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/providers',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { id: 'compat-default', kind: 'openai-compatible', apiKey: 'sk-secret' },
+    });
+    expect(create.statusCode).toBe(400);
+
+    await app.close();
+  });
+
+  it('still creates a valid remote-kind provider with both apiKey and baseUrl (no regression)', async () => {
+    const app = await buildApp({ db });
+    const token = await setupOwner(app);
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/providers',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { id: 'compat-default', kind: 'openai-compatible', apiKey: 'sk-secret', baseUrl: 'https://my-local-server/v1' },
+    });
+    expect(create.statusCode).toBe(201);
+
+    await app.close();
+  });
+
+  it('still creates an agentd-backed provider (ollama) with neither apiKey nor baseUrl', async () => {
+    const app = await buildApp({ db });
+    const token = await setupOwner(app);
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/providers',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { id: 'ollama-default', kind: 'ollama' },
+    });
+    expect(create.statusCode).toBe(201);
+
+    await app.close();
+  });
+
   it('returns 502 when a remote provider is unreachable while listing models', async () => {
     const app = await buildApp({ db });
     const token = await setupOwner(app);

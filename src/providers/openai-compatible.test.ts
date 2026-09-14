@@ -58,6 +58,14 @@ describe('OpenAICompatibleClient', () => {
     ).rejects.toThrow(ProviderUnavailableError);
   });
 
+  it('throws ProviderUnavailableError (not a TypeError) when a 200 response has no choices', async () => {
+    const fakeFetch = vi.fn(async () => new Response(JSON.stringify({ choices: [] }), { status: 200 }));
+    const client = new OpenAICompatibleClient('openai', 'https://api.openai.com/v1', 'sk-test', fakeFetch as unknown as typeof fetch);
+    await expect(
+      client.chat({ providerId: 'openai-default', model: 'gpt-5', messages: [{ role: 'user', content: 'hi' }] })
+    ).rejects.toThrow(ProviderUnavailableError);
+  });
+
   it('lists models from the /models endpoint', async () => {
     const fakeFetch = vi.fn(async () => new Response(JSON.stringify({ data: [{ id: 'gpt-5' }, { id: 'gpt-5-mini' }] }), { status: 200 }));
     const client = new OpenAICompatibleClient('openai', 'https://api.openai.com/v1', 'sk-test', fakeFetch as unknown as typeof fetch);

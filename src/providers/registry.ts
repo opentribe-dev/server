@@ -14,7 +14,9 @@ export function resolveProviderClient(config: ProviderConfigRecord, fetchImpl: t
   switch (config.kind) {
     case 'anthropic':
       if (!config.apiKey) throw new Error(`provider "${config.id}" is missing an apiKey`);
-      return new AnthropicClient(config.apiKey, fetchImpl);
+      return config.baseUrl
+        ? new AnthropicClient(config.apiKey, fetchImpl, config.baseUrl)
+        : new AnthropicClient(config.apiKey, fetchImpl);
     case 'openai':
     case 'openrouter':
     case 'deepseek': {

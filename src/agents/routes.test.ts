@@ -55,6 +55,24 @@ describe('agent routes', () => {
     await app.close();
   });
 
+  it('returns 400 with invalid_request for an invalid body', async () => {
+    const app = await buildApp({ db });
+    const token = await setupAndGetToken(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { name: '', modelPolicy: { defaultProviderId: 'anthropic', defaultModel: 'claude-sonnet-5' } },
+    });
+    expect(response.statusCode).toBe(400);
+    const body = response.json();
+    expect(body.error).toBe('invalid_request');
+    expect(Array.isArray(body.issues)).toBe(true);
+
+    await app.close();
+  });
+
   it('rejects agent creation without authentication', async () => {
     const app = await buildApp({ db });
     const response = await app.inject({

@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import type { WebSocket } from 'ws';
+import type { WsServerEvent } from '@opencrew/protocol';
 
 interface EventRow {
   seq: number;
@@ -9,25 +10,17 @@ interface EventRow {
   created_at: string;
 }
 
-export interface BroadcastEvent {
-  seq: number;
-  topic: string;
-  type: string;
-  payload: unknown;
-  ts: string;
-}
-
 export class ConnectionHub {
   private sockets = new Map<WebSocket, Set<string>>();
 
   constructor(private db: Database.Database) {}
 
-  publish(topic: string, type: string, payload: unknown): BroadcastEvent {
+  publish(topic: string, type: string, payload: Record<string, unknown>): WsServerEvent {
     const createdAt = new Date().toISOString();
     const info = this.db
       .prepare('INSERT INTO event_log (topic, type, payload, created_at) VALUES (?, ?, ?, ?)')
       .run(topic, type, JSON.stringify(payload), createdAt);
-    const event: BroadcastEvent = {
+    const event: WsServerEvent = {
       seq: Number(info.lastInsertRowid),
       topic,
       type,
@@ -46,7 +39,7 @@ export class ConnectionHub {
     this.sockets.delete(socket);
   }
 
-  replaySince(topics: string[], sinceSeq: number): BroadcastEvent[] {
+  replaySince(topics: string[], sinceSeq: number): WsServerEvent[] {
     if (topics.length === 0) return [];
     const placeholders = topics.map(() => '?').join(',');
     const rows = this.db
@@ -61,7 +54,7 @@ export class ConnectionHub {
     }));
   }
 
-  private broadcastToTopic(event: BroadcastEvent): void {
+  private broadcastToTopic(event: WsServerEvent): void {
     for (const [socket, topics] of this.sockets) {
       if (topics.has(event.topic) && socket.readyState === socket.OPEN) {
         socket.send(JSON.stringify(event));

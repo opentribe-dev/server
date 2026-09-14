@@ -64,6 +64,22 @@ describe('auth routes', () => {
     await app.close();
   });
 
+  it('returns 400 with invalid_request for an invalid login body', async () => {
+    const app = await buildApp({ db });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: 'not-an-email', password: 'x' },
+    });
+    expect(response.statusCode).toBe(400);
+    const body = response.json();
+    expect(body.error).toBe('invalid_request');
+    expect(Array.isArray(body.issues)).toBe(true);
+
+    await app.close();
+  });
+
   it('requires a valid bearer token for /api/auth/me', async () => {
     const app = await buildApp({ db });
     const setup = await app.inject({

@@ -103,4 +103,86 @@ describe('conversation routes', () => {
     expect(response.statusCode).toBe(401);
     await app.close();
   });
+
+  it('allows the owner to add and remove a group member', async () => {
+    const app = await buildApp({ db });
+    const { token } = await setupOwner(app);
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
+    const carol = createUser(db, { email: 'carol@example.com', displayName: 'Carol', passwordHash: 'y', role: 'member' });
+
+    const group = await app.inject({
+      method: 'POST',
+      url: '/api/conversations/group',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { name: 'Team', participants: [{ participantId: bob.id, participantType: 'user' }] },
+    });
+    const groupId = group.json().id as string;
+
+    const add = await app.inject({
+      method: 'POST',
+      url: `/api/conversations/${groupId}/members`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: carol.id, participantType: 'user' },
+    });
+    expect(add.statusCode).toBe(204);
+
+    const remove = await app.inject({
+      method: 'DELETE',
+      url: `/api/conversations/${groupId}/members/${carol.id}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(remove.statusCode).toBe(204);
+
+    await app.close();
+  });
+
+  it('rejects membership changes from a member-role user', async () => {
+    const app = await buildApp({ db });
+    const { token } = await setupOwner(app);
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
+    const carol = createUser(db, { email: 'carol@example.com', displayName: 'Carol', passwordHash: 'y', role: 'member' });
+    const bobToken = createSession(db, bob.id);
+
+    const group = await app.inject({
+      method: 'POST',
+      url: '/api/conversations/group',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { name: 'Team', participants: [{ participantId: bob.id, participantType: 'user' }] },
+    });
+    const groupId = group.json().id as string;
+
+    const add = await app.inject({
+      method: 'POST',
+      url: `/api/conversations/${groupId}/members`,
+      headers: { authorization: `Bearer ${bobToken}` },
+      payload: { participantId: carol.id, participantType: 'user' },
+    });
+    expect(add.statusCode).toBe(403);
+
+    await app.close();
+  });
+
+  it('rejects adding a member to a dm conversation', async () => {
+    const app = await buildApp({ db });
+    const { token } = await setupOwner(app);
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
+    const carol = createUser(db, { email: 'carol@example.com', displayName: 'Carol', passwordHash: 'y', role: 'member' });
+
+    const dm = await app.inject({
+      method: 'POST',
+      url: '/api/conversations',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: bob.id, participantType: 'user' },
+    });
+
+    const add = await app.inject({
+      method: 'POST',
+      url: `/api/conversations/${dm.json().id}/members`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: carol.id, participantType: 'user' },
+    });
+    expect(add.statusCode).toBe(400);
+
+    await app.close();
+  });
 });

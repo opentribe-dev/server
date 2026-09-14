@@ -4,6 +4,7 @@ import type Database from 'better-sqlite3';
 import { ZodError } from 'zod';
 import { registerAgentRoutes } from './agents/routes.js';
 import { registerAuthRoutes } from './auth/routes.js';
+import { registerConversationRoutes } from './conversations/routes.js';
 import { ConnectionHub } from './ws/hub.js';
 import { registerWsRoutes } from './ws/routes.js';
 
@@ -28,6 +29,7 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
   app.get('/api/health', async () => ({ ok: true }));
   registerAuthRoutes(app);
   registerAgentRoutes(app);
+  registerConversationRoutes(app);
   registerWsRoutes(app, hub);
 
   return app;

@@ -80,5 +80,22 @@ export async function runAgentTurn(deps: RunAgentTurnDeps, input: RunAgentTurnIn
   });
   deps.hub.publish(`conversation:${input.conversationId}`, 'message.created', { ...message });
 
-  return { run, message, handoff: { attempted: false, dispatched: false } };
+  if (!result.handoffToAgentId) {
+    return { run, message, handoff: { attempted: false, dispatched: false } };
+  }
+
+  const nextHopCount = hopCount + 1;
+  if (nextHopCount > DEFAULT_MAX_HOP_COUNT) {
+    return { run, message, handoff: { attempted: true, dispatched: false, blockedReason: 'max_hop_count_exceeded' } };
+  }
+
+  await runAgentTurn(deps, {
+    agentId: result.handoffToAgentId,
+    conversationId: input.conversationId,
+    rootRunId,
+    causationId: runId,
+    hopCount: nextHopCount,
+  });
+
+  return { run, message, handoff: { attempted: true, dispatched: true } };
 }

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_MAX_HOP_COUNT } from '@opencrew/protocol';
 import { openDatabase } from '../db/connection.js';
 import { runMigrations } from '../db/migrate.js';
 import { createUser } from '../users/repository.js';
@@ -10,7 +11,7 @@ import { createConversation } from '../conversations/repository.js';
 import { createMessage } from '../messages/repository.js';
 import { ConnectionHub } from '../ws/hub.js';
 import { defaultRespond, runAgentTurn, type AgentTurnResult, type RespondFn } from './engine.js';
-import { getAgentRun } from './runs.js';
+import { getAgentRun, listAgentRunsForRoot } from './runs.js';
 
 describe('runAgentTurn (single turn, no handoff)', () => {
   let dataDir: string;
@@ -80,5 +81,29 @@ describe('runAgentTurn (single turn, no handoff)', () => {
     const result = await defaultRespond({ agentId: 'agent_1', conversationId: 'conversation_1', recentMessages: [] });
     expect(result.body).toContain('agent_1');
     expect(result.handoffToAgentId).toBeUndefined();
+  });
+
+  it('stops an agent-to-agent handoff chain at the max hop count instead of looping forever', async () => {
+    const { db, agent, conversation, hub } = freshSetup();
+    const selfHandoffRespond = vi.fn(
+      async (): Promise<AgentTurnResult> => ({
+        body: 'still thinking, handing off to myself',
+        handoffToAgentId: agent.id,
+      })
+    );
+
+    const outcome = await runAgentTurn(
+      { db, hub, respond: selfHandoffRespond },
+      { agentId: agent.id, conversationId: conversation.id }
+    );
+
+    const chain = listAgentRunsForRoot(db, outcome.run.rootRunId);
+    expect(chain).toHaveLength(DEFAULT_MAX_HOP_COUNT + 1);
+    expect(chain.map((r) => r.hopCount)).toEqual([0, 1, 2, 3, 4]);
+    // 5 recursive calls each attempted a handoff; only the first 4 (hop 0-3)
+    // could dispatch a follow-up (into hops 1-4); the hop-4 call's attempted
+    // handoff to hop 5 was blocked, never persisted.
+    expect(selfHandoffRespond).toHaveBeenCalledTimes(5);
+    db.close();
   });
 });

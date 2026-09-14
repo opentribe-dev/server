@@ -1,5 +1,7 @@
 import type { Role } from '../users/repository.js';
 
+export type { Role };
+
 export type Action =
   | 'agent:create'
   | 'agent:manage'

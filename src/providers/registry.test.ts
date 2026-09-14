@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest';
+import { AgentdBackedProviderClient } from './agentd-stub.js';
+import { AnthropicClient } from './anthropic.js';
+import { OpenAICompatibleClient } from './openai-compatible.js';
+import { resolveProviderClient } from './registry.js';
+
+describe('resolveProviderClient', () => {
+  it('resolves an anthropic config to an AnthropicClient', () => {
+    const client = resolveProviderClient({ id: 'a', kind: 'anthropic', apiKey: 'sk-test', baseUrl: null, createdAt: '', updatedAt: '' });
+    expect(client).toBeInstanceOf(AnthropicClient);
+  });
+
+  it('resolves openai/openrouter/deepseek/openai-compatible configs to OpenAICompatibleClient', () => {
+    for (const kind of ['openai', 'openrouter', 'deepseek'] as const) {
+      const client = resolveProviderClient({ id: 'x', kind, apiKey: 'sk-test', baseUrl: null, createdAt: '', updatedAt: '' });
+      expect(client).toBeInstanceOf(OpenAICompatibleClient);
+      expect(client.kind).toBe(kind);
+    }
+    const compatible = resolveProviderClient({
+      id: 'x',
+      kind: 'openai-compatible',
+      apiKey: 'sk-test',
+      baseUrl: 'https://my-local-server/v1',
+      createdAt: '',
+      updatedAt: '',
+    });
+    expect(compatible).toBeInstanceOf(OpenAICompatibleClient);
+  });
+
+  it('resolves claude-subscription/ollama configs to AgentdBackedProviderClient', () => {
+    for (const kind of ['claude-subscription', 'ollama'] as const) {
+      const client = resolveProviderClient({ id: 'x', kind, apiKey: null, baseUrl: null, createdAt: '', updatedAt: '' });
+      expect(client).toBeInstanceOf(AgentdBackedProviderClient);
+    }
+  });
+
+  it('throws a plain config error (not a ProviderError) when a remote provider has no api key', () => {
+    expect(() =>
+      resolveProviderClient({ id: 'x', kind: 'anthropic', apiKey: null, baseUrl: null, createdAt: '', updatedAt: '' })
+    ).toThrow(/missing an apiKey/);
+  });
+
+  it('throws a plain config error when an openai-compatible config has no baseUrl', () => {
+    expect(() =>
+      resolveProviderClient({ id: 'x', kind: 'openai-compatible', apiKey: 'sk-test', baseUrl: null, createdAt: '', updatedAt: '' })
+    ).toThrow(/requires a baseUrl/);
+  });
+});

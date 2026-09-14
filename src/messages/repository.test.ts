@@ -1,0 +1,118 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import { openDatabase } from '../db/connection.js';
+import { runMigrations } from '../db/migrate.js';
+import { createUser } from '../users/repository.js';
+import { createConversation } from '../conversations/repository.js';
+import { createMessage, listMessagesForConversation, ReplyNotInConversationError } from './repository.js';
+
+describe('messages repository', () => {
+  let dataDir: string;
+
+  afterEach(() => {
+    if (dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  function freshDbWithConversation() {
+    dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencrew-messages-'));
+    const db = openDatabase(dataDir);
+    runMigrations(db);
+    const alice = createUser(db, { email: 'alice@example.com', displayName: 'Alice', passwordHash: 'x', role: 'owner' });
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'y', role: 'member' });
+    const conversation = createConversation(db, {
+      kind: 'dm',
+      name: null,
+      participants: [
+        { participantId: alice.id, participantType: 'user' },
+        { participantId: bob.id, participantType: 'user' },
+      ],
+    });
+    return { db, alice, bob, conversation };
+  }
+
+  it('creates a message with a mention and reads it back in order', () => {
+    const { db, alice, bob, conversation } = freshDbWithConversation();
+    const message = createMessage(db, {
+      conversationId: conversation.id,
+      authorId: alice.id,
+      authorType: 'user',
+      body: `hey @${bob.displayName} following up`,
+      mentions: [{ targetId: bob.id, targetType: 'user' }],
+      replyToMessageId: null,
+    });
+    expect(message.mentions).toHaveLength(1);
+
+    const list = listMessagesForConversation(db, conversation.id);
+    expect(list).toHaveLength(1);
+    expect(list[0].id).toBe(message.id);
+    db.close();
+  });
+
+  it('accepts a reply to a message in the same conversation', () => {
+    const { db, alice, conversation } = freshDbWithConversation();
+    const first = createMessage(db, {
+      conversationId: conversation.id,
+      authorId: alice.id,
+      authorType: 'user',
+      body: 'first message',
+      mentions: [],
+      replyToMessageId: null,
+    });
+    const reply = createMessage(db, {
+      conversationId: conversation.id,
+      authorId: alice.id,
+      authorType: 'user',
+      body: 'a reply',
+      mentions: [],
+      replyToMessageId: first.id,
+    });
+    expect(reply.replyToMessageId).toBe(first.id);
+    db.close();
+  });
+
+  it('rejects a reply that references a message from a different conversation', () => {
+    const { db, alice, bob, conversation } = freshDbWithConversation();
+    const otherConversation = createConversation(db, {
+      kind: 'dm',
+      name: null,
+      participants: [
+        { participantId: alice.id, participantType: 'user' },
+        { participantId: bob.id, participantType: 'user' },
+      ],
+    });
+    const messageInOther = createMessage(db, {
+      conversationId: otherConversation.id,
+      authorId: alice.id,
+      authorType: 'user',
+      body: 'lives elsewhere',
+      mentions: [],
+      replyToMessageId: null,
+    });
+    expect(() =>
+      createMessage(db, {
+        conversationId: conversation.id,
+        authorId: alice.id,
+        authorType: 'user',
+        body: 'wrong reply target',
+        mentions: [],
+        replyToMessageId: messageInOther.id,
+      })
+    ).toThrow(ReplyNotInConversationError);
+    db.close();
+  });
+
+  it('orders messages oldest-first and respects the limit', () => {
+    const { db, alice, conversation } = freshDbWithConversation();
+    createMessage(db, { conversationId: conversation.id, authorId: alice.id, authorType: 'user', body: 'one', mentions: [], replyToMessageId: null });
+    createMessage(db, { conversationId: conversation.id, authorId: alice.id, authorType: 'user', body: 'two', mentions: [], replyToMessageId: null });
+    createMessage(db, { conversationId: conversation.id, authorId: alice.id, authorType: 'user', body: 'three', mentions: [], replyToMessageId: null });
+
+    const limited = listMessagesForConversation(db, conversation.id, 2);
+    expect(limited).toHaveLength(2);
+    expect(limited[0].body).toBe('one');
+    expect(limited[1].body).toBe('two');
+    db.close();
+  });
+});

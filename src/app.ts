@@ -5,6 +5,7 @@ import { ZodError } from 'zod';
 import { registerAgentRoutes } from './agents/routes.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerConversationRoutes } from './conversations/routes.js';
+import { registerMessageRoutes } from './messages/routes.js';
 import { ConnectionHub } from './ws/hub.js';
 import { registerWsRoutes } from './ws/routes.js';
 
@@ -30,6 +31,7 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
   registerAuthRoutes(app);
   registerAgentRoutes(app);
   registerConversationRoutes(app);
+  registerMessageRoutes(app, hub);
   registerWsRoutes(app, hub);
 
   return app;

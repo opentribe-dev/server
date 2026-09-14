@@ -100,6 +100,9 @@ describe('runAgentTurn (single turn, no handoff)', () => {
     const chain = listAgentRunsForRoot(db, outcome.run.rootRunId);
     expect(chain).toHaveLength(DEFAULT_MAX_HOP_COUNT + 1);
     expect(chain.map((r) => r.hopCount)).toEqual([0, 1, 2, 3, 4]);
+    for (let i = 1; i < chain.length; i++) {
+      expect(chain[i].causationId).toBe(chain[i - 1].runId);
+    }
     // 5 recursive calls each attempted a handoff; only the first 4 (hop 0-3)
     // could dispatch a follow-up (into hops 1-4); the hop-4 call's attempted
     // handoff to hop 5 was blocked, never persisted.
@@ -123,7 +126,7 @@ describe('runAgentTurn (single turn, no handoff)', () => {
 
     expect(outcome.handoff).toEqual({
       attempted: true,
-      dispatched: false,
+      dispatched: true,
       blockedReason: 'max_hop_count_exceeded',
     });
     db.close();

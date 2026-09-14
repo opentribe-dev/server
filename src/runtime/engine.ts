@@ -100,6 +100,6 @@ export async function runAgentTurn(deps: RunAgentTurnDeps, input: RunAgentTurnIn
   return {
     run,
     message,
-    handoff: nested.handoff.blockedReason ? nested.handoff : { attempted: true, dispatched: true },
+    handoff: { attempted: true, dispatched: true, blockedReason: nested.handoff.blockedReason },
   };
 }

@@ -1,7 +1,9 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
+import { createSession } from '../auth/session.js';
 import { runMigrations } from '../db/migrate.js';
+import { createUser } from '../users/repository.js';
 
 describe('runtime routes', () => {
   let db: Database.Database;
@@ -109,6 +111,48 @@ describe('runtime routes', () => {
     });
     expect(invoke.statusCode).toBe(201);
     expect(invoke.json().message.body).toBe(`hi from ${agentId}`);
+
+    await app.close();
+  });
+
+  it('rejects creating a runtime binding for an agent owned by another user with 403', async () => {
+    const app = await buildApp({ db });
+    const { agentId } = await setupOwnerAndAgent(app);
+
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
+    const bobToken = createSession(db, bob.id);
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/runtime-bindings',
+      headers: { authorization: `Bearer ${bobToken}` },
+      payload: { agentId, runtimeKind: 'native', workspacePath: '/workspaces/assistant' },
+    });
+    expect(create.statusCode).toBe(403);
+
+    await app.close();
+  });
+
+  it('rejects invoking an agent run on a conversation the caller is not a participant of with 403', async () => {
+    const app = await buildApp({ db });
+    const { token, agentId } = await setupOwnerAndAgent(app);
+    const dm = await app.inject({
+      method: 'POST',
+      url: '/api/conversations',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: agentId, participantType: 'agent' },
+    });
+
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
+    const bobToken = createSession(db, bob.id);
+
+    const invoke = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${agentId}/runs`,
+      headers: { authorization: `Bearer ${bobToken}` },
+      payload: { conversationId: dm.json().id },
+    });
+    expect(invoke.statusCode).toBe(403);
 
     await app.close();
   });

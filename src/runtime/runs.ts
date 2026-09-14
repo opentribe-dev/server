@@ -57,7 +57,7 @@ export function getAgentRun(db: Database.Database, runId: string): AgentRun | un
 
 export function listAgentRunsForRoot(db: Database.Database, rootRunId: string): AgentRun[] {
   const rows = db
-    .prepare('SELECT * FROM agent_runs WHERE root_run_id = ? ORDER BY created_at ASC')
+    .prepare('SELECT * FROM agent_runs WHERE root_run_id = ? ORDER BY created_at ASC, rowid ASC')
     .all(rootRunId) as AgentRunRow[];
   return rows.map(rowToAgentRun);
 }

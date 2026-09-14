@@ -89,7 +89,7 @@ export async function runAgentTurn(deps: RunAgentTurnDeps, input: RunAgentTurnIn
     return { run, message, handoff: { attempted: true, dispatched: false, blockedReason: 'max_hop_count_exceeded' } };
   }
 
-  await runAgentTurn(deps, {
+  const nested = await runAgentTurn(deps, {
     agentId: result.handoffToAgentId,
     conversationId: input.conversationId,
     rootRunId,
@@ -97,5 +97,9 @@ export async function runAgentTurn(deps: RunAgentTurnDeps, input: RunAgentTurnIn
     hopCount: nextHopCount,
   });
 
-  return { run, message, handoff: { attempted: true, dispatched: true } };
+  return {
+    run,
+    message,
+    handoff: nested.handoff.blockedReason ? nested.handoff : { attempted: true, dispatched: true },
+  };
 }

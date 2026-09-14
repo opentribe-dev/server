@@ -106,4 +106,26 @@ describe('runAgentTurn (single turn, no handoff)', () => {
     expect(selfHandoffRespond).toHaveBeenCalledTimes(5);
     db.close();
   });
+
+  it('propagates a downstream max-hop-count block up to the top-level caller', async () => {
+    const { db, agent, conversation, hub } = freshSetup();
+    const selfHandoffRespond = vi.fn(
+      async (): Promise<AgentTurnResult> => ({
+        body: 'still thinking, handing off to myself',
+        handoffToAgentId: agent.id,
+      })
+    );
+
+    const outcome = await runAgentTurn(
+      { db, hub, respond: selfHandoffRespond },
+      { agentId: agent.id, conversationId: conversation.id }
+    );
+
+    expect(outcome.handoff).toEqual({
+      attempted: true,
+      dispatched: false,
+      blockedReason: 'max_hop_count_exceeded',
+    });
+    db.close();
+  });
 });

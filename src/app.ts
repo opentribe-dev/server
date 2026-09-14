@@ -7,6 +7,7 @@ import { registerApprovalRoutes } from './approvals/routes.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerConversationRoutes } from './conversations/routes.js';
 import { registerMessageRoutes } from './messages/routes.js';
+import { registerMemoryFactRoutes } from './memory/routes.js';
 import { registerProviderRoutes } from './providers/routes.js';
 import { defaultRespond, type RespondFn } from './runtime/engine.js';
 import { registerRuntimeRoutes } from './runtime/routes.js';
@@ -37,6 +38,7 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
   registerAgentRoutes(app);
   registerConversationRoutes(app);
   registerMessageRoutes(app, hub);
+  registerMemoryFactRoutes(app);
   registerProviderRoutes(app);
   registerRuntimeRoutes(app, hub, opts.respond ?? defaultRespond);
   registerApprovalRoutes(app);

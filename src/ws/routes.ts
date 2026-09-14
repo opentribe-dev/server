@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { verifySessionToken } from '../auth/session.js';
+import { listConversationsForParticipant } from '../conversations/repository.js';
 import type { ConnectionHub } from './hub.js';
 
 export function registerWsRoutes(app: FastifyInstance, hub: ConnectionHub): void {
@@ -12,7 +13,10 @@ export function registerWsRoutes(app: FastifyInstance, hub: ConnectionHub): void
       return;
     }
 
-    const topics = [`user:${userId}`];
+    const conversationTopics = listConversationsForParticipant(app.db, userId).map(
+      (c) => `conversation:${c.id}`
+    );
+    const topics = [`user:${userId}`, ...conversationTopics];
     hub.subscribe(socket, topics);
 
     const sinceSeqParam = url.searchParams.get('sinceSeq');

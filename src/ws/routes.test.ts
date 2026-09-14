@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
 import { buildApp } from '../app.js';
 import { runMigrations } from '../db/migrate.js';
+import { createUser } from '../users/repository.js';
+import { createConversation } from '../conversations/repository.js';
 
 describe('WebSocket delivery and reconnect/replay', () => {
   let db: Database.Database;
@@ -78,5 +80,27 @@ describe('WebSocket delivery and reconnect/replay', () => {
     const socket = new WebSocket(`ws://${baseUrl}/ws?token=not-a-real-token`);
     const closeCode = await new Promise<number>((resolve) => socket.once('close', resolve));
     expect(closeCode).toBe(4001);
+  });
+
+  it('subscribes a connecting client to its conversation topics, not just its user topic', async () => {
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
+    const conversation = createConversation(db, {
+      kind: 'dm',
+      name: null,
+      participants: [
+        { participantId: userId, participantType: 'user' },
+        { participantId: bob.id, participantType: 'user' },
+      ],
+    });
+
+    const socket = new WebSocket(`ws://${baseUrl}/ws?token=${token}`);
+    await waitForOpen(socket);
+
+    const messagePromise = waitForMessage(socket);
+    app.hub.publish(`conversation:${conversation.id}`, 'message.created', { body: 'hi' });
+    const received = await messagePromise;
+
+    expect(received.topic).toBe(`conversation:${conversation.id}`);
+    socket.close();
   });
 });

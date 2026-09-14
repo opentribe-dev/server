@@ -91,3 +91,10 @@ export function listMessagesForConversation(db: Database.Database, conversationI
     .all(conversationId, limit) as MessageRow[];
   return rows.map((row) => rowToMessage(row, getMentions(db, row.id)));
 }
+
+export function listRecentMessagesForConversation(db: Database.Database, conversationId: string, limit = 20): Message[] {
+  const rows = db
+    .prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?')
+    .all(conversationId, limit) as MessageRow[];
+  return rows.reverse().map((row) => rowToMessage(row, getMentions(db, row.id)));
+}

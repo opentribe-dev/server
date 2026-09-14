@@ -1,7 +1,7 @@
 import { DEFAULT_MAX_HOP_COUNT, type AgentRun, type Message } from '@opencrew/protocol';
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
-import { createMessage, listMessagesForConversation } from '../messages/repository.js';
+import { createMessage, listRecentMessagesForConversation } from '../messages/repository.js';
 import type { ConnectionHub } from '../ws/hub.js';
 import { createAgentRun } from './runs.js';
 
@@ -63,7 +63,7 @@ export async function runAgentTurn(deps: RunAgentTurnDeps, input: RunAgentTurnIn
     conversationId: input.conversationId,
   });
 
-  const recentMessages = listMessagesForConversation(deps.db, input.conversationId, 20);
+  const recentMessages = listRecentMessagesForConversation(deps.db, input.conversationId, 20);
   const result = await deps.respond({
     agentId: input.agentId,
     conversationId: input.conversationId,

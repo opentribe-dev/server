@@ -6,7 +6,7 @@ import { openDatabase } from '../db/connection.js';
 import { runMigrations } from '../db/migrate.js';
 import { createUser } from '../users/repository.js';
 import { createConversation, listConversationsForParticipant } from '../conversations/repository.js';
-import { createMessage, listMessagesForConversation, ReplyNotInConversationError } from './repository.js';
+import { createMessage, listMessagesForConversation, listRecentMessagesForConversation, ReplyNotInConversationError } from './repository.js';
 
 function waitForNextMillisecond(): void {
   const start = Date.now();
@@ -158,6 +158,18 @@ describe('messages repository', () => {
     expect(limited).toHaveLength(2);
     expect(limited[0].body).toBe('one');
     expect(limited[1].body).toBe('two');
+    db.close();
+  });
+
+  it('listRecentMessagesForConversation returns the most recent N messages, oldest-of-the-batch first', () => {
+    const { db, alice, conversation } = freshDbWithConversation();
+    for (const body of ['one', 'two', 'three', 'four']) {
+      createMessage(db, { conversationId: conversation.id, authorId: alice.id, authorType: 'user', body, mentions: [], replyToMessageId: null });
+    }
+    const recent = listRecentMessagesForConversation(db, conversation.id, 2);
+    expect(recent).toHaveLength(2);
+    expect(recent[0].body).toBe('three');
+    expect(recent[1].body).toBe('four');
     db.close();
   });
 });

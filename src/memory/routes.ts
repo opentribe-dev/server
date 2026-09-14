@@ -2,8 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { getAgent } from '../agents/repository.js';
 import { requireAuth } from '../auth/middleware.js';
+import { getConversation, isParticipant } from '../conversations/repository.js';
 import type { Role } from '../permissions/model.js';
 import { createMemoryFact, deleteMemoryFact, getMemoryFact, listMemoryFactsForAgent, updateMemoryFact } from './repository.js';
+import { getConversationSummary } from './summary-repository.js';
 
 const CreateMemoryFactBodySchema = z.object({
   content: z.string().min(1),
@@ -91,5 +93,26 @@ export function registerMemoryFactRoutes(app: FastifyInstance): void {
     }
     deleteMemoryFact(app.db, factId);
     reply.code(204).send();
+  });
+}
+
+export function registerConversationSummaryRoutes(app: FastifyInstance): void {
+  app.get('/api/conversations/:id/summary', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const conversation = getConversation(app.db, id);
+    if (!conversation) {
+      reply.code(404).send({ error: 'conversation_not_found' });
+      return;
+    }
+    if (!isParticipant(app.db, id, request.user!.id, 'user')) {
+      reply.code(403).send({ error: 'not_a_participant' });
+      return;
+    }
+    const summary = getConversationSummary(app.db, id);
+    if (!summary) {
+      reply.code(404).send({ error: 'summary_not_found' });
+      return;
+    }
+    reply.send(summary);
   });
 }

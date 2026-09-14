@@ -102,4 +102,23 @@ describe('message routes', () => {
 
     await app.close();
   });
+
+  it('enqueues a summarize-conversation job after a message is posted', async () => {
+    const app = await buildApp({ db });
+    const { token, conversationId } = await setupOwnerAndBobDm(app);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/conversations/${conversationId}/messages`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { body: 'hello' },
+    });
+
+    const row = db.prepare("SELECT type, status FROM jobs WHERE type = 'summarize-conversation'").get() as
+      | { type: string; status: string }
+      | undefined;
+    expect(row?.status).toBe('pending');
+
+    await app.close();
+  });
 });

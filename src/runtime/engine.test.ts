@@ -131,4 +131,17 @@ describe('runAgentTurn (single turn, no handoff)', () => {
     });
     db.close();
   });
+
+  it('enqueues a summarize-conversation job after persisting the agent message', async () => {
+    const { db, agent, conversation, hub } = freshSetup();
+    const respond = vi.fn(async (): Promise<AgentTurnResult> => ({ body: 'hello human' }));
+
+    await runAgentTurn({ db, hub, respond }, { agentId: agent.id, conversationId: conversation.id });
+
+    const row = db.prepare("SELECT status FROM jobs WHERE type = 'summarize-conversation'").get() as
+      | { status: string }
+      | undefined;
+    expect(row?.status).toBe('pending');
+    db.close();
+  });
 });

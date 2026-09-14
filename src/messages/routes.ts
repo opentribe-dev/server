@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../auth/middleware.js';
 import { getConversation, isParticipant } from '../conversations/repository.js';
+import { enqueueJob } from '../jobs/repository.js';
+import { SUMMARIZE_CONVERSATION_JOB_TYPE } from '../memory/summary.js';
 import type { ConnectionHub } from '../ws/hub.js';
 import { createMessage, listMessagesForConversation, ReplyNotInConversationError } from './repository.js';
 
@@ -50,6 +52,11 @@ export function registerMessageRoutes(app: FastifyInstance, hub: ConnectionHub):
     }
 
     hub.publish(`conversation:${id}`, 'message.created', { ...message });
+    enqueueJob(app.db, {
+      type: SUMMARIZE_CONVERSATION_JOB_TYPE,
+      payload: { conversationId: id },
+      dedupeKey: `${SUMMARIZE_CONVERSATION_JOB_TYPE}:${id}`,
+    });
     reply.code(201).send(message);
   });
 

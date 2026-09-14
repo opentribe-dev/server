@@ -1,6 +1,8 @@
 import { DEFAULT_MAX_HOP_COUNT, type AgentRun, type Message } from '@opencrew/protocol';
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
+import { enqueueJob } from '../jobs/repository.js';
+import { SUMMARIZE_CONVERSATION_JOB_TYPE } from '../memory/summary.js';
 import { createMessage, listRecentMessagesForConversation } from '../messages/repository.js';
 import type { ConnectionHub } from '../ws/hub.js';
 import { createAgentRun } from './runs.js';
@@ -79,6 +81,11 @@ export async function runAgentTurn(deps: RunAgentTurnDeps, input: RunAgentTurnIn
     replyToMessageId: null,
   });
   deps.hub.publish(`conversation:${input.conversationId}`, 'message.created', { ...message });
+  enqueueJob(deps.db, {
+    type: SUMMARIZE_CONVERSATION_JOB_TYPE,
+    payload: { conversationId: input.conversationId },
+    dedupeKey: `${SUMMARIZE_CONVERSATION_JOB_TYPE}:${input.conversationId}`,
+  });
 
   if (!result.handoffToAgentId) {
     return { run, message, handoff: { attempted: false, dispatched: false } };

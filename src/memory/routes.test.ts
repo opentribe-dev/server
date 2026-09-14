@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
 import { createSession } from '../auth/session.js';
 import { runMigrations } from '../db/migrate.js';
+import { updateConversationSummary } from './summary.js';
 import { createUser } from '../users/repository.js';
 
 describe('memory fact routes', () => {
@@ -174,6 +175,68 @@ describe('memory fact routes', () => {
       payload: { content: 'Anything.' },
     });
     expect(create.statusCode).toBe(404);
+
+    await app.close();
+  });
+
+  it('returns 404 for a conversation with no summary yet', async () => {
+    const app = await buildApp({ db });
+    const setup = await app.inject({
+      method: 'POST',
+      url: '/api/auth/setup',
+      payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
+    });
+    const token = setup.json().token as string;
+    const other = createUser(db, { email: 'other@example.com', displayName: 'Other', passwordHash: 'x', role: 'member' });
+    const dm = await app.inject({
+      method: 'POST',
+      url: '/api/conversations',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: other.id, participantType: 'user' },
+    });
+    const conversationId = dm.json().id as string;
+
+    const get = await app.inject({
+      method: 'GET',
+      url: `/api/conversations/${conversationId}/summary`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(get.statusCode).toBe(404);
+
+    await app.close();
+  });
+
+  it('returns a generated summary once one exists', async () => {
+    const app = await buildApp({ db });
+    const setup = await app.inject({
+      method: 'POST',
+      url: '/api/auth/setup',
+      payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
+    });
+    const token = setup.json().token as string;
+    const other = createUser(db, { email: 'other2@example.com', displayName: 'Other2', passwordHash: 'x', role: 'member' });
+    const dm = await app.inject({
+      method: 'POST',
+      url: '/api/conversations',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: other.id, participantType: 'user' },
+    });
+    const conversationId = dm.json().id as string;
+    await app.inject({
+      method: 'POST',
+      url: `/api/conversations/${conversationId}/messages`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { body: 'summarize me' },
+    });
+    await updateConversationSummary(db, conversationId);
+
+    const get = await app.inject({
+      method: 'GET',
+      url: `/api/conversations/${conversationId}/summary`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(get.statusCode).toBe(200);
+    expect(get.json().summary).toContain('summarize me');
 
     await app.close();
   });

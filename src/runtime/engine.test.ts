@@ -9,7 +9,7 @@ import { createAgent } from '../agents/repository.js';
 import { createConversation } from '../conversations/repository.js';
 import { createMessage } from '../messages/repository.js';
 import { ConnectionHub } from '../ws/hub.js';
-import { defaultRespond, runAgentTurn, type AgentTurnResult } from './engine.js';
+import { defaultRespond, runAgentTurn, type AgentTurnResult, type RespondFn } from './engine.js';
 import { getAgentRun } from './runs.js';
 
 describe('runAgentTurn (single turn, no handoff)', () => {
@@ -53,7 +53,7 @@ describe('runAgentTurn (single turn, no handoff)', () => {
 
   it('persists a run, calls respond with recent conversation context, and persists+publishes the response as an agent message', async () => {
     const { db, agent, conversation, hub } = freshSetup();
-    const respond = vi.fn(async (): Promise<AgentTurnResult> => ({ body: 'hello human' }));
+    const respond = vi.fn(async (_input: Parameters<RespondFn>[0]): Promise<AgentTurnResult> => ({ body: 'hello human' }));
 
     const outcome = await runAgentTurn(
       { db, hub, respond },

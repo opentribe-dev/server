@@ -73,11 +73,13 @@ export function createMessage(
      VALUES (@id, @conversation_id, @author_id, @author_type, @body, @reply_to_message_id, @created_at)`
   );
   const insertMention = db.prepare('INSERT INTO message_mentions (message_id, target_id, target_type) VALUES (?, ?, ?)');
+  const touchConversation = db.prepare('UPDATE conversations SET updated_at = ? WHERE id = ?');
   const createTx = db.transaction(() => {
     insertMessage.run(row);
     for (const m of input.mentions) {
       insertMention.run(row.id, m.targetId, m.targetType);
     }
+    touchConversation.run(now, input.conversationId);
   });
   createTx();
   return rowToMessage(row, input.mentions);

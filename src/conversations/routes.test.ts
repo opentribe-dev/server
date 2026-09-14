@@ -162,6 +162,104 @@ describe('conversation routes', () => {
     await app.close();
   });
 
+  it('rejects a dm where the participant is the caller (self-dm)', async () => {
+    const app = await buildApp({ db });
+    const { token, userId } = await setupOwner(app);
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/conversations',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: userId, participantType: 'user' },
+    });
+    expect(create.statusCode).toBe(400);
+    expect(create.json().error).toBe('cannot_dm_self');
+
+    await app.close();
+  });
+
+  it('dedupes the caller out of a group participants list without a 500', async () => {
+    const app = await buildApp({ db });
+    const { token, userId } = await setupOwner(app);
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/conversations/group',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: 'Team',
+        participants: [
+          { participantId: bob.id, participantType: 'user' },
+          { participantId: userId, participantType: 'user' },
+        ],
+      },
+    });
+    expect(create.statusCode).toBe(201);
+    const participants = create.json().participants as Array<{ participantId: string }>;
+    expect(participants).toHaveLength(2);
+    expect(participants.filter((p) => p.participantId === userId)).toHaveLength(1);
+
+    await app.close();
+  });
+
+  it('rejects re-adding an existing group member with 409, not a 500', async () => {
+    const app = await buildApp({ db });
+    const { token } = await setupOwner(app);
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
+
+    const group = await app.inject({
+      method: 'POST',
+      url: '/api/conversations/group',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { name: 'Team', participants: [{ participantId: bob.id, participantType: 'user' }] },
+    });
+    const groupId = group.json().id as string;
+
+    const readd = await app.inject({
+      method: 'POST',
+      url: `/api/conversations/${groupId}/members`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: bob.id, participantType: 'user' },
+    });
+    expect(readd.statusCode).toBe(409);
+    expect(readd.json().error).toBe('already_a_participant');
+
+    await app.close();
+  });
+
+  it('returns the existing dm conversation on a second create for the same pair', async () => {
+    const app = await buildApp({ db });
+    const { token } = await setupOwner(app);
+    const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
+
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/conversations',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: bob.id, participantType: 'user' },
+    });
+    expect(first.statusCode).toBe(201);
+
+    const second = await app.inject({
+      method: 'POST',
+      url: '/api/conversations',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { participantId: bob.id, participantType: 'user' },
+    });
+    expect(second.statusCode).toBe(200);
+    expect(second.json().id).toBe(first.json().id);
+
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/conversations',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(list.json()).toHaveLength(1);
+
+    await app.close();
+  });
+
   it('rejects adding a member to a dm conversation', async () => {
     const app = await buildApp({ db });
     const { token } = await setupOwner(app);

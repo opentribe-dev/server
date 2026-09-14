@@ -4,7 +4,15 @@ import { getAgent } from '../agents/repository.js';
 import { requireAuth } from '../auth/middleware.js';
 import { can, type Role } from '../permissions/model.js';
 import { getUserById } from '../users/repository.js';
-import { addParticipant, createConversation, getConversation, listConversationsForParticipant, removeParticipant } from './repository.js';
+import {
+  addParticipant,
+  createConversation,
+  findDmConversation,
+  getConversation,
+  isParticipant,
+  listConversationsForParticipant,
+  removeParticipant,
+} from './repository.js';
 
 const CreateDmBodySchema = z.object({
   participantId: z.string().min(1),
@@ -35,8 +43,17 @@ function participantExists(
 export function registerConversationRoutes(app: FastifyInstance): void {
   app.post('/api/conversations', { preHandler: requireAuth }, async (request, reply) => {
     const body = CreateDmBodySchema.parse(request.body);
+    if (body.participantId === request.user!.id) {
+      reply.code(400).send({ error: 'cannot_dm_self' });
+      return;
+    }
     if (!participantExists(app, body.participantId, body.participantType)) {
       reply.code(404).send({ error: 'participant_not_found' });
+      return;
+    }
+    const existing = findDmConversation(app.db, request.user!.id, body.participantId);
+    if (existing) {
+      reply.code(200).send(existing);
       return;
     }
     const conversation = createConversation(app.db, {
@@ -56,7 +73,14 @@ export function registerConversationRoutes(app: FastifyInstance): void {
       return;
     }
     const body = CreateGroupBodySchema.parse(request.body);
-    for (const p of body.participants) {
+    const uniqueOthers = Array.from(
+      new Map(
+        body.participants
+          .filter((p) => p.participantId !== request.user!.id)
+          .map((p) => [`${p.participantId}:${p.participantType}`, p])
+      ).values()
+    );
+    for (const p of uniqueOthers) {
       if (!participantExists(app, p.participantId, p.participantType)) {
         reply.code(404).send({ error: 'participant_not_found' });
         return;
@@ -65,7 +89,7 @@ export function registerConversationRoutes(app: FastifyInstance): void {
     const conversation = createConversation(app.db, {
       kind: 'group',
       name: body.name,
-      participants: [{ participantId: request.user!.id, participantType: 'user' }, ...body.participants],
+      participants: [{ participantId: request.user!.id, participantType: 'user' }, ...uniqueOthers],
     });
     reply.code(201).send(conversation);
   });
@@ -85,6 +109,8 @@ export function registerConversationRoutes(app: FastifyInstance): void {
       reply.code(400).send({ error: 'not_a_group' });
       return;
     }
+    // Intentional: admin/owner is a site-wide trusted role in this self-host model,
+    // not scoped per-conversation — matches the existing agent-listing/auth trust model.
     if (!can(request.user!.role as Role, 'group:manage_members')) {
       reply.code(403).send({ error: 'forbidden' });
       return;
@@ -92,6 +118,10 @@ export function registerConversationRoutes(app: FastifyInstance): void {
     const body = AddMemberBodySchema.parse(request.body);
     if (!participantExists(app, body.participantId, body.participantType)) {
       reply.code(404).send({ error: 'participant_not_found' });
+      return;
+    }
+    if (isParticipant(app.db, id, body.participantId, body.participantType)) {
+      reply.code(409).send({ error: 'already_a_participant' });
       return;
     }
     addParticipant(app.db, id, { participantId: body.participantId, participantType: body.participantType });
@@ -109,6 +139,8 @@ export function registerConversationRoutes(app: FastifyInstance): void {
       reply.code(400).send({ error: 'not_a_group' });
       return;
     }
+    // Intentional: admin/owner is a site-wide trusted role in this self-host model,
+    // not scoped per-conversation — matches the existing agent-listing/auth trust model.
     if (!can(request.user!.role as Role, 'group:manage_members')) {
       reply.code(403).send({ error: 'forbidden' });
       return;

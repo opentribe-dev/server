@@ -8,6 +8,7 @@ import { createUser } from '../users/repository.js';
 import {
   addParticipant,
   createConversation,
+  findDmConversation,
   getConversation,
   isParticipant,
   listConversationsForParticipant,
@@ -76,6 +77,29 @@ describe('conversations repository', () => {
     const aliceConversations = listConversationsForParticipant(db, alice.id);
     expect(aliceConversations).toHaveLength(1);
     expect(aliceConversations[0].id).toBe(dm.id);
+    db.close();
+  });
+
+  it('finds an existing dm conversation for a participant pair', () => {
+    const { db, alice, bob } = freshDbWithTwoUsers();
+    const dm = createConversation(db, {
+      kind: 'dm',
+      name: null,
+      participants: [
+        { participantId: alice.id, participantType: 'user' },
+        { participantId: bob.id, participantType: 'user' },
+      ],
+    });
+    const found = findDmConversation(db, alice.id, bob.id);
+    expect(found?.id).toBe(dm.id);
+    const foundReversed = findDmConversation(db, bob.id, alice.id);
+    expect(foundReversed?.id).toBe(dm.id);
+    db.close();
+  });
+
+  it('returns undefined from findDmConversation when no dm exists for the pair', () => {
+    const { db, alice, bob } = freshDbWithTwoUsers();
+    expect(findDmConversation(db, alice.id, bob.id)).toBeUndefined();
     db.close();
   });
 

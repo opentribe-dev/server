@@ -71,6 +71,23 @@ export function getConversation(db: Database.Database, id: string): Conversation
   return rowToConversation(row, getParticipants(db, id));
 }
 
+export function findDmConversation(
+  db: Database.Database,
+  participantAId: string,
+  participantBId: string
+): Conversation | undefined {
+  const row = db
+    .prepare(
+      `SELECT c.* FROM conversations c
+       WHERE c.kind = 'dm'
+         AND EXISTS (SELECT 1 FROM conversation_participants cp WHERE cp.conversation_id = c.id AND cp.participant_id = ?)
+         AND EXISTS (SELECT 1 FROM conversation_participants cp WHERE cp.conversation_id = c.id AND cp.participant_id = ?)`
+    )
+    .get(participantAId, participantBId) as ConversationRow | undefined;
+  if (!row) return undefined;
+  return rowToConversation(row, getParticipants(db, row.id));
+}
+
 export function isParticipant(
   db: Database.Database,
   conversationId: string,
@@ -102,6 +119,7 @@ export function addParticipant(db: Database.Database, conversationId: string, pa
     `INSERT INTO conversation_participants (conversation_id, participant_id, participant_type, added_at)
      VALUES (?, ?, ?, ?)`
   ).run(conversationId, participant.participantId, participant.participantType, new Date().toISOString());
+  db.prepare('UPDATE conversations SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), conversationId);
 }
 
 export function removeParticipant(db: Database.Database, conversationId: string, participantId: string): void {
@@ -109,4 +127,5 @@ export function removeParticipant(db: Database.Database, conversationId: string,
     conversationId,
     participantId
   );
+  db.prepare('UPDATE conversations SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), conversationId);
 }

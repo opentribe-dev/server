@@ -5,8 +5,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { openDatabase } from '../db/connection.js';
 import { runMigrations } from '../db/migrate.js';
 import { createUser } from '../users/repository.js';
-import { createConversation } from '../conversations/repository.js';
+import { createConversation, listConversationsForParticipant } from '../conversations/repository.js';
 import { createMessage, listMessagesForConversation, ReplyNotInConversationError } from './repository.js';
+
+function waitForNextMillisecond(): void {
+  const start = Date.now();
+  while (Date.now() === start) {
+    // busy-wait to guarantee a strictly later ISO timestamp for the next write
+  }
+}
 
 describe('messages repository', () => {
   let dataDir: string;
@@ -38,7 +45,7 @@ describe('messages repository', () => {
       conversationId: conversation.id,
       authorId: alice.id,
       authorType: 'user',
-      body: `hey @${bob.displayName} following up`,
+      body: `hey @${bob.display_name} following up`,
       mentions: [{ targetId: bob.id, targetType: 'user' }],
       replyToMessageId: null,
     });
@@ -100,6 +107,44 @@ describe('messages repository', () => {
         replyToMessageId: messageInOther.id,
       })
     ).toThrow(ReplyNotInConversationError);
+    db.close();
+  });
+
+  it('bumps the conversation updated_at when a message is posted, reordering the participant list', () => {
+    const { db, alice, conversation: older } = freshDbWithConversation();
+    const bob = createUser(db, { email: 'bob2@example.com', displayName: 'Bob2', passwordHash: 'y', role: 'member' });
+
+    // Ensure the second conversation has a strictly later created_at/updated_at than `older`.
+    waitForNextMillisecond();
+    const newer = createConversation(db, {
+      kind: 'dm',
+      name: null,
+      participants: [
+        { participantId: alice.id, participantType: 'user' },
+        { participantId: bob.id, participantType: 'user' },
+      ],
+    });
+
+    // Without any activity, the newer conversation sorts first.
+    const initialOrder = listConversationsForParticipant(db, alice.id);
+    expect(initialOrder[0].id).toBe(newer.id);
+    expect(initialOrder[1].id).toBe(older.id);
+
+    // Posting a message to the older conversation should bump its updated_at past the
+    // newer, message-free conversation.
+    waitForNextMillisecond();
+    createMessage(db, {
+      conversationId: older.id,
+      authorId: alice.id,
+      authorType: 'user',
+      body: 'bringing this one back to the top',
+      mentions: [],
+      replyToMessageId: null,
+    });
+
+    const reordered = listConversationsForParticipant(db, alice.id);
+    expect(reordered[0].id).toBe(older.id);
+    expect(reordered[1].id).toBe(newer.id);
     db.close();
   });
 

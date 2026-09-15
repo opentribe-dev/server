@@ -87,9 +87,9 @@ export function createMessage(
 
 export function listMessagesForConversation(db: Database.Database, conversationId: string, limit = 50): Message[] {
   const rows = db
-    .prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC, rowid ASC LIMIT ?')
+    .prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?')
     .all(conversationId, limit) as MessageRow[];
-  return rows.map((row) => rowToMessage(row, getMentions(db, row.id)));
+  return rows.reverse().map((row) => rowToMessage(row, getMentions(db, row.id)));
 }
 
 export function listRecentMessagesForConversation(db: Database.Database, conversationId: string, limit = 20): Message[] {

@@ -21,14 +21,14 @@ describe('message routes', () => {
   async function setupOwnerAndBobDm(app: Awaited<ReturnType<typeof buildApp>>) {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
     const bob = createUser(db, { email: 'bob@example.com', displayName: 'Bob', passwordHash: 'x', role: 'member' });
     const create = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: bob.id, participantType: 'user' },
     });
@@ -41,7 +41,7 @@ describe('message routes', () => {
 
     const post = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${token}` },
       payload: { body: 'hello there' },
     });
@@ -50,7 +50,7 @@ describe('message routes', () => {
 
     const list = await app.inject({
       method: 'GET',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(list.statusCode).toBe(200);
@@ -67,7 +67,7 @@ describe('message routes', () => {
 
     const post = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${outsiderToken}` },
       payload: { body: 'i should not be able to post here' },
     });
@@ -81,20 +81,20 @@ describe('message routes', () => {
     const { token, conversationId } = await setupOwnerAndBobDm(app);
     const otherDm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: createUser(db, { email: 'carol@example.com', displayName: 'Carol', passwordHash: 'x', role: 'member' }).id, participantType: 'user' },
     });
     const elsewhere = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${otherDm.json().id}/messages`,
+      url: `/api/v1/conversations/${otherDm.json().id}/messages`,
       headers: { authorization: `Bearer ${token}` },
       payload: { body: 'lives elsewhere' },
     });
 
     const reply = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${token}` },
       payload: { body: 'wrong reply', replyToMessageId: elsewhere.json().id },
     });
@@ -109,7 +109,7 @@ describe('message routes', () => {
 
     await app.inject({
       method: 'POST',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${token}` },
       payload: { body: 'hello' },
     });

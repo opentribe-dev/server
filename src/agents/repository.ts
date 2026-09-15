@@ -64,3 +64,12 @@ export function listAgentsForOwner(db: Database.Database, ownerUserId: string): 
   const rows = db.prepare('SELECT * FROM agents WHERE owner_user_id = ?').all(ownerUserId) as AgentRow[];
   return rows.map(rowToAgent);
 }
+
+export function updateAgent(db: Database.Database, id: string, ownerUserId: string, input: {
+  name: string; personality: string; modelPolicy: ModelPolicy;
+}): Agent | undefined {
+  const info = db.prepare(`UPDATE agents SET name = ?, personality = ?, model_policy = ?, updated_at = ?
+    WHERE id = ? AND owner_user_id = ?`).run(input.name, input.personality,
+    JSON.stringify(input.modelPolicy), new Date().toISOString(), id, ownerUserId);
+  return info.changes ? getAgent(db, id) : undefined;
+}

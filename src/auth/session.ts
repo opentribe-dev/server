@@ -23,3 +23,7 @@ export function verifySessionToken(db: Database.Database, token: string): string
   if (new Date(row.expires_at).getTime() < Date.now()) return undefined;
   return row.user_id;
 }
+
+export function revokeSession(db: Database.Database, token: string): void {
+  db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+}

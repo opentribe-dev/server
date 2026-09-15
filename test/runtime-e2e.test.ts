@@ -47,14 +47,14 @@ describe('runtime end-to-end: agent invocation, WS delivery, and max-hop protect
   it('invokes an agent via REST, persists its response, and delivers it live over WebSocket', async () => {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
 
     const createAgent = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Assistant', modelPolicy: { defaultProviderId: 'anthropic', defaultModel: 'claude-sonnet-5' } },
     });
@@ -62,7 +62,7 @@ describe('runtime end-to-end: agent invocation, WS delivery, and max-hop protect
 
     const binding = await app.inject({
       method: 'POST',
-      url: '/api/runtime-bindings',
+      url: '/api/v1/runtime-bindings',
       headers: { authorization: `Bearer ${token}` },
       payload: { agentId, runtimeKind: 'native', workspacePath: '/workspaces/assistant' },
     });
@@ -70,20 +70,20 @@ describe('runtime end-to-end: agent invocation, WS delivery, and max-hop protect
 
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: agentId, participantType: 'agent' },
     });
     expect(dm.statusCode).toBe(201);
     const conversationId = dm.json().id as string;
 
-    const socket = new WebSocket(`ws://${baseUrl}/ws?token=${token}`);
+    const socket = new WebSocket(`ws://${baseUrl}/api/v1/ws?token=${token}`);
     await waitForOpen(socket);
 
     const messagePromise = waitForMessage(socket);
     const invoke = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/runs`,
+      url: `/api/v1/agents/${agentId}/runs`,
       headers: { authorization: `Bearer ${token}` },
       payload: { conversationId },
     });
@@ -99,14 +99,14 @@ describe('runtime end-to-end: agent invocation, WS delivery, and max-hop protect
   it('stops an agent-to-agent handoff chain at the max hop count instead of looping forever', async () => {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
 
     const createAgent = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Looper', modelPolicy: { defaultProviderId: 'anthropic', defaultModel: 'claude-sonnet-5' } },
     });
@@ -114,7 +114,7 @@ describe('runtime end-to-end: agent invocation, WS delivery, and max-hop protect
 
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: loopingAgentId, participantType: 'agent' },
     });
@@ -122,7 +122,7 @@ describe('runtime end-to-end: agent invocation, WS delivery, and max-hop protect
 
     const invoke = await app.inject({
       method: 'POST',
-      url: `/api/agents/${loopingAgentId}/runs`,
+      url: `/api/v1/agents/${loopingAgentId}/runs`,
       headers: { authorization: `Bearer ${token}` },
       payload: { conversationId },
     });
@@ -130,7 +130,7 @@ describe('runtime end-to-end: agent invocation, WS delivery, and max-hop protect
 
     const messages = await app.inject({
       method: 'GET',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(messages.json()).toHaveLength(5);

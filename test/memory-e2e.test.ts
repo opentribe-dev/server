@@ -13,7 +13,7 @@ describe('memory end-to-end: MemoryFact dedup and conversation summary regenerat
     db = new Database(':memory:');
     db.pragma('foreign_keys = ON');
     runMigrations(db);
-    app = await buildApp({ db });
+    app = await buildApp({ db, respond: async () => ({ body: 'Test reply' }) });
   });
 
   afterEach(async () => {
@@ -24,13 +24,13 @@ describe('memory end-to-end: MemoryFact dedup and conversation summary regenerat
   it('deduplicates a memory fact created twice through the real REST surface', async () => {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
     const createAgent = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Assistant', modelPolicy: { defaultProviderId: 'anthropic', defaultModel: 'claude-sonnet-5' } },
     });
@@ -38,13 +38,13 @@ describe('memory end-to-end: MemoryFact dedup and conversation summary regenerat
 
     const first = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
       payload: { content: 'User prefers terse replies.' },
     });
     const second = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
       payload: { content: '  User PREFERS terse replies.  ' },
     });
@@ -55,7 +55,7 @@ describe('memory end-to-end: MemoryFact dedup and conversation summary regenerat
 
     const list = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(list.json()).toHaveLength(1);
@@ -64,19 +64,22 @@ describe('memory end-to-end: MemoryFact dedup and conversation summary regenerat
   it('collapses a burst of messages into one pending job, and running it produces a fetchable summary', async () => {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
+    await app.inject({ method: 'POST', url: '/api/v1/providers',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { id: 'anthropic', kind: 'anthropic', apiKey: 'test-key' } });
     const other = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Assistant', modelPolicy: { defaultProviderId: 'anthropic', defaultModel: 'claude-sonnet-5' } },
     });
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: other.json().id, participantType: 'agent' },
     });
@@ -85,7 +88,7 @@ describe('memory end-to-end: MemoryFact dedup and conversation summary regenerat
     for (const body of ['first', 'second', 'third']) {
       await app.inject({
         method: 'POST',
-        url: `/api/conversations/${conversationId}/messages`,
+        url: `/api/v1/conversations/${conversationId}/messages`,
         headers: { authorization: `Bearer ${token}` },
         payload: { body },
       });
@@ -107,7 +110,7 @@ describe('memory end-to-end: MemoryFact dedup and conversation summary regenerat
 
     const summary = await app.inject({
       method: 'GET',
-      url: `/api/conversations/${conversationId}/summary`,
+      url: `/api/v1/conversations/${conversationId}/summary`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(summary.statusCode).toBe(200);

@@ -41,7 +41,7 @@ function participantExists(
 }
 
 export function registerConversationRoutes(app: FastifyInstance): void {
-  app.post('/api/conversations', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/v1/conversations', { preHandler: requireAuth }, async (request, reply) => {
     const body = CreateDmBodySchema.parse(request.body);
     if (body.participantId === request.user!.id) {
       reply.code(400).send({ error: 'cannot_dm_self' });
@@ -67,7 +67,7 @@ export function registerConversationRoutes(app: FastifyInstance): void {
     reply.code(201).send(conversation);
   });
 
-  app.post('/api/conversations/group', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/v1/conversations/group', { preHandler: requireAuth }, async (request, reply) => {
     if (!can(request.user!.role as Role, 'conversation:create_group')) {
       reply.code(403).send({ error: 'forbidden' });
       return;
@@ -94,11 +94,11 @@ export function registerConversationRoutes(app: FastifyInstance): void {
     reply.code(201).send(conversation);
   });
 
-  app.get('/api/conversations', { preHandler: requireAuth }, async (request, reply) => {
+  app.get('/api/v1/conversations', { preHandler: requireAuth }, async (request, reply) => {
     reply.send(listConversationsForParticipant(app.db, request.user!.id));
   });
 
-  app.post('/api/conversations/:id/members', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/v1/conversations/:id/members', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const conversation = getConversation(app.db, id);
     if (!conversation) {
@@ -128,7 +128,7 @@ export function registerConversationRoutes(app: FastifyInstance): void {
     reply.code(204).send();
   });
 
-  app.delete('/api/conversations/:id/members/:participantId', { preHandler: requireAuth }, async (request, reply) => {
+  app.delete('/api/v1/conversations/:id/members/:participantId', { preHandler: requireAuth }, async (request, reply) => {
     const { id, participantId } = request.params as { id: string; participantId: string };
     const conversation = getConversation(app.db, id);
     if (!conversation) {

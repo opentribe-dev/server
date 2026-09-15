@@ -22,7 +22,7 @@ describe('agent routes', () => {
   async function setupAndGetToken(app: Awaited<ReturnType<typeof buildApp>>) {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     return setup.json().token as string;
@@ -34,7 +34,7 @@ describe('agent routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
       payload: {
         name: 'Researcher',
@@ -46,7 +46,7 @@ describe('agent routes', () => {
 
     const list = await app.inject({
       method: 'GET',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
     });
     expect(list.statusCode).toBe(200);
@@ -61,7 +61,7 @@ describe('agent routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: '', modelPolicy: { defaultProviderId: 'anthropic', defaultModel: 'claude-sonnet-5' } },
     });
@@ -77,14 +77,14 @@ describe('agent routes', () => {
     const app = await buildApp({ db });
     const response = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       payload: { name: 'Nope', modelPolicy: { defaultProviderId: 'anthropic', defaultModel: 'x' } },
     });
     expect(response.statusCode).toBe(401);
     await app.close();
   });
 
-  it('scopes GET /api/agents to authenticated user only', async () => {
+  it('scopes GET /api/v1/agents to authenticated user only', async () => {
     const app = await buildApp({ db });
     const userAToken = await setupAndGetToken(app);
 
@@ -100,7 +100,7 @@ describe('agent routes', () => {
     // Create agent as user A
     const createA = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${userAToken}` },
       payload: {
         name: 'Agent A',
@@ -112,7 +112,7 @@ describe('agent routes', () => {
     // Create agent as user B
     const createB = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${userBToken}` },
       payload: {
         name: 'Agent B',
@@ -124,7 +124,7 @@ describe('agent routes', () => {
     // List agents as user A, should only see Agent A
     const listA = await app.inject({
       method: 'GET',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${userAToken}` },
     });
     expect(listA.statusCode).toBe(200);
@@ -135,7 +135,7 @@ describe('agent routes', () => {
     // List agents as user B, should only see Agent B
     const listB = await app.inject({
       method: 'GET',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${userBToken}` },
     });
     expect(listB.statusCode).toBe(200);

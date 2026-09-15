@@ -10,7 +10,7 @@ import { createAgent } from '../agents/repository.js';
 import { createConversation } from '../conversations/repository.js';
 import { createMessage } from '../messages/repository.js';
 import { ConnectionHub } from '../ws/hub.js';
-import { defaultRespond, runAgentTurn, type AgentTurnResult, type RespondFn } from './engine.js';
+import { runAgentTurn, type AgentTurnResult, type RespondFn } from './engine.js';
 import { getAgentRun, listAgentRunsForRoot } from './runs.js';
 
 describe('runAgentTurn (single turn, no handoff)', () => {
@@ -75,12 +75,6 @@ describe('runAgentTurn (single turn, no handoff)', () => {
 
     expect(getAgentRun(db, outcome.run.runId)?.runId).toBe(outcome.run.runId);
     db.close();
-  });
-
-  it('defaultRespond returns a deterministic stub response mentioning the agent', async () => {
-    const result = await defaultRespond({ agentId: 'agent_1', conversationId: 'conversation_1', recentMessages: [] });
-    expect(result.body).toContain('agent_1');
-    expect(result.handoffToAgentId).toBeUndefined();
   });
 
   it('stops an agent-to-agent handoff chain at the max hop count instead of looping forever', async () => {

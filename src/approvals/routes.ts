@@ -8,11 +8,11 @@ const RespondBodySchema = z.object({
 });
 
 export function registerApprovalRoutes(app: FastifyInstance): void {
-  app.get('/api/approvals', { preHandler: requireAuth }, async (_request, reply) => {
+  app.get('/api/v1/approvals', { preHandler: requireAuth }, async (_request, reply) => {
     reply.send(listPendingApprovals(app.db));
   });
 
-  app.post('/api/approvals/:id/respond', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/v1/approvals/:id/respond', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     if (!getApproval(app.db, id)) {
       reply.code(404).send({ error: 'approval_not_found' });

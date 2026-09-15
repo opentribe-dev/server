@@ -22,13 +22,13 @@ describe('memory fact routes', () => {
   async function setupOwnerWithAgent(app: Awaited<ReturnType<typeof buildApp>>) {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
     const createAgent = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Assistant', modelPolicy: { defaultProviderId: 'anthropic', defaultModel: 'claude-sonnet-5' } },
     });
@@ -41,7 +41,7 @@ describe('memory fact routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
       payload: { content: 'Prefers concise answers.' },
     });
@@ -58,13 +58,13 @@ describe('memory fact routes', () => {
 
     const first = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
       payload: { content: 'Likes dark mode.' },
     });
     const second = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
       payload: { content: '  Likes DARK mode.  ' },
     });
@@ -80,14 +80,14 @@ describe('memory fact routes', () => {
     const { token, agentId } = await setupOwnerWithAgent(app);
     await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
       payload: { content: 'One.' },
     });
 
     const list = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(list.statusCode).toBe(200);
@@ -101,7 +101,7 @@ describe('memory fact routes', () => {
     const { token, agentId } = await setupOwnerWithAgent(app);
     const create = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
       payload: { content: 'Original.' },
     });
@@ -109,7 +109,7 @@ describe('memory fact routes', () => {
 
     const update = await app.inject({
       method: 'PATCH',
-      url: `/api/agents/${agentId}/memory-facts/${factId}`,
+      url: `/api/v1/agents/${agentId}/memory-facts/${factId}`,
       headers: { authorization: `Bearer ${token}` },
       payload: { content: 'Revised.' },
     });
@@ -124,7 +124,7 @@ describe('memory fact routes', () => {
     const { token, agentId } = await setupOwnerWithAgent(app);
     const create = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
       payload: { content: 'Temporary.' },
     });
@@ -132,14 +132,14 @@ describe('memory fact routes', () => {
 
     const del = await app.inject({
       method: 'DELETE',
-      url: `/api/agents/${agentId}/memory-facts/${factId}`,
+      url: `/api/v1/agents/${agentId}/memory-facts/${factId}`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(del.statusCode).toBe(204);
 
     const list = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(list.json()).toHaveLength(0);
@@ -155,7 +155,7 @@ describe('memory fact routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/memory-facts`,
+      url: `/api/v1/agents/${agentId}/memory-facts`,
       headers: { authorization: `Bearer ${memberToken}` },
       payload: { content: 'Should not be allowed.' },
     });
@@ -170,7 +170,7 @@ describe('memory fact routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/agents/does-not-exist/memory-facts',
+      url: '/api/v1/agents/does-not-exist/memory-facts',
       headers: { authorization: `Bearer ${token}` },
       payload: { content: 'Anything.' },
     });
@@ -183,14 +183,14 @@ describe('memory fact routes', () => {
     const app = await buildApp({ db });
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
     const other = createUser(db, { email: 'other@example.com', displayName: 'Other', passwordHash: 'x', role: 'member' });
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: other.id, participantType: 'user' },
     });
@@ -198,7 +198,7 @@ describe('memory fact routes', () => {
 
     const get = await app.inject({
       method: 'GET',
-      url: `/api/conversations/${conversationId}/summary`,
+      url: `/api/v1/conversations/${conversationId}/summary`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(get.statusCode).toBe(404);
@@ -210,21 +210,21 @@ describe('memory fact routes', () => {
     const app = await buildApp({ db });
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
     const other = createUser(db, { email: 'other2@example.com', displayName: 'Other2', passwordHash: 'x', role: 'member' });
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: other.id, participantType: 'user' },
     });
     const conversationId = dm.json().id as string;
     await app.inject({
       method: 'POST',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${token}` },
       payload: { body: 'summarize me' },
     });
@@ -232,7 +232,7 @@ describe('memory fact routes', () => {
 
     const get = await app.inject({
       method: 'GET',
-      url: `/api/conversations/${conversationId}/summary`,
+      url: `/api/v1/conversations/${conversationId}/summary`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(get.statusCode).toBe(200);

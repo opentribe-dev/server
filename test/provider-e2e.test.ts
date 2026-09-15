@@ -21,14 +21,14 @@ describe('provider end-to-end: real request shape through a configured provider,
   async function setupAgentAndConversation(app: Awaited<ReturnType<typeof buildApp>>) {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
 
     const createAgent = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Assistant', modelPolicy: { defaultProviderId: 'anthropic-default', defaultModel: 'claude-sonnet-5' } },
     });
@@ -36,7 +36,7 @@ describe('provider end-to-end: real request shape through a configured provider,
 
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: agentId, participantType: 'agent' },
     });
@@ -64,7 +64,7 @@ describe('provider end-to-end: real request shape through a configured provider,
 
     const invoke = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/runs`,
+      url: `/api/v1/agents/${agentId}/runs`,
       headers: { authorization: `Bearer ${token}` },
       payload: { conversationId },
     });
@@ -86,7 +86,7 @@ describe('provider end-to-end: real request shape through a configured provider,
 
     const invoke = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/runs`,
+      url: `/api/v1/agents/${agentId}/runs`,
       headers: { authorization: `Bearer ${token}` },
       payload: { conversationId },
     });
@@ -95,7 +95,7 @@ describe('provider end-to-end: real request shape through a configured provider,
 
     const messages = await app.inject({
       method: 'GET',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(messages.json()).toHaveLength(1);

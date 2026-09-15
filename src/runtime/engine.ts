@@ -40,10 +40,6 @@ export interface RunAgentTurnOutcome {
 
 export class MaxHopCountExceededError extends Error {}
 
-export const defaultRespond: RespondFn = async ({ agentId }) => ({
-  body: `[stub] Agent ${agentId} has no configured provider yet.`,
-});
-
 export async function runAgentTurn(deps: RunAgentTurnDeps, input: RunAgentTurnInput): Promise<RunAgentTurnOutcome> {
   const hopCount = input.hopCount ?? 0;
   if (hopCount > DEFAULT_MAX_HOP_COUNT) {

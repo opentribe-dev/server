@@ -25,7 +25,7 @@ describe('WebSocket delivery and reconnect/replay', () => {
 
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     token = setup.json().token;
@@ -48,7 +48,7 @@ describe('WebSocket delivery and reconnect/replay', () => {
   }
 
   it('delivers a live event published after the socket connects', async () => {
-    const socket = new WebSocket(`ws://${baseUrl}/ws?token=${token}`);
+    const socket = new WebSocket(`ws://${baseUrl}/api/v1/ws?token=${token}`);
     await waitForOpen(socket);
 
     const messagePromise = waitForMessage(socket);
@@ -61,14 +61,14 @@ describe('WebSocket delivery and reconnect/replay', () => {
   });
 
   it('replays events published while disconnected when reconnecting with sinceSeq', async () => {
-    const firstSocket = new WebSocket(`ws://${baseUrl}/ws?token=${token}`);
+    const firstSocket = new WebSocket(`ws://${baseUrl}/api/v1/ws?token=${token}`);
     await waitForOpen(firstSocket);
     firstSocket.close();
     await new Promise((resolve) => firstSocket.once('close', resolve));
 
     const missedWhileDisconnected = app.hub.publish(`user:${userId}`, 'user.updated', { n: 1 });
 
-    const secondSocket = new WebSocket(`ws://${baseUrl}/ws?token=${token}&sinceSeq=0`);
+    const secondSocket = new WebSocket(`ws://${baseUrl}/api/v1/ws?token=${token}&sinceSeq=0`);
     const replayed = await waitForMessage(secondSocket);
 
     expect(replayed.seq).toBe(missedWhileDisconnected.seq);
@@ -77,7 +77,7 @@ describe('WebSocket delivery and reconnect/replay', () => {
   });
 
   it('closes the connection with 4001 for an invalid token', async () => {
-    const socket = new WebSocket(`ws://${baseUrl}/ws?token=not-a-real-token`);
+    const socket = new WebSocket(`ws://${baseUrl}/api/v1/ws?token=not-a-real-token`);
     const closeCode = await new Promise<number>((resolve) => socket.once('close', resolve));
     expect(closeCode).toBe(4001);
   });
@@ -93,7 +93,7 @@ describe('WebSocket delivery and reconnect/replay', () => {
       ],
     });
 
-    const socket = new WebSocket(`ws://${baseUrl}/ws?token=${token}`);
+    const socket = new WebSocket(`ws://${baseUrl}/api/v1/ws?token=${token}`);
     await waitForOpen(socket);
 
     const messagePromise = waitForMessage(socket);

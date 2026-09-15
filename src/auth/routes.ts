@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { countUsers, createUser, getUserByEmail, getUserById } from '../users/repository.js';
 import { requireAuth } from './middleware.js';
 import { hashPassword, verifyPassword } from './password.js';
-import { createSession } from './session.js';
+import { createSession, revokeSession } from './session.js';
 
 const SetupBodySchema = z.object({
   email: z.string().email(),
@@ -17,7 +17,8 @@ const LoginBodySchema = z.object({
 });
 
 export function registerAuthRoutes(app: FastifyInstance): void {
-  app.post('/api/auth/setup', async (request, reply) => {
+  app.get('/api/v1/auth/status', async () => ({ initialized: countUsers(app.db) > 0 }));
+  app.post('/api/v1/auth/setup', async (request, reply) => {
     if (countUsers(app.db) > 0) {
       reply.code(409).send({ error: 'already_initialized' });
       return;
@@ -33,7 +34,7 @@ export function registerAuthRoutes(app: FastifyInstance): void {
     reply.code(201).send({ token, user: { id: user.id, email: user.email, role: user.role } });
   });
 
-  app.post('/api/auth/login', async (request, reply) => {
+  app.post('/api/v1/auth/login', async (request, reply) => {
     const body = LoginBodySchema.parse(request.body);
     const user = getUserByEmail(app.db, body.email);
     if (!user || !verifyPassword(body.password, user.password_hash)) {
@@ -44,8 +45,12 @@ export function registerAuthRoutes(app: FastifyInstance): void {
     reply.code(200).send({ token, user: { id: user.id, email: user.email, role: user.role } });
   });
 
-  app.get('/api/auth/me', { preHandler: requireAuth }, async (request, reply) => {
+  app.get('/api/v1/auth/me', { preHandler: requireAuth }, async (request, reply) => {
     const user = getUserById(app.db, request.user!.id)!;
     reply.send({ id: user.id, email: user.email, role: user.role });
+  });
+  app.post('/api/v1/auth/logout', { preHandler: requireAuth }, async (request, reply) => {
+    revokeSession(app.db, request.headers.authorization!.slice(7));
+    reply.code(204).send();
   });
 }

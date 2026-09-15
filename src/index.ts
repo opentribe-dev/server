@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   });
   jobRunner.start();
 
-  await app.listen({ port: config.port, host: '0.0.0.0' });
+  await app.listen({ port: config.port, host: config.host });
   console.log(`OpenCrew server listening on port ${config.port}`);
 }
 

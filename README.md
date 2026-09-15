@@ -14,6 +14,7 @@ cd ../server && npm install
 ## Configuration
 
 - `OPENCREW_PORT` — port to listen on (default `4000`)
+- `OPENCREW_HOST` — listen address (default `0.0.0.0`; use `127.0.0.1` for loopback-only local testing)
 - `OPENCREW_DATA_DIR` — directory for the SQLite database and attachments (default `./data`)
 
 ## Run

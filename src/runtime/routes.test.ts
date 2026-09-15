@@ -21,13 +21,13 @@ describe('runtime routes', () => {
   async function setupOwnerAndAgent(app: Awaited<ReturnType<typeof buildApp>>) {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
     const createAgent = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/v1/agents',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Assistant', modelPolicy: { defaultProviderId: 'anthropic', defaultModel: 'claude-sonnet-5' } },
     });
@@ -40,7 +40,7 @@ describe('runtime routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/runtime-bindings',
+      url: '/api/v1/runtime-bindings',
       headers: { authorization: `Bearer ${token}` },
       payload: { agentId, runtimeKind: 'native', workspacePath: '/workspaces/assistant' },
     });
@@ -48,7 +48,7 @@ describe('runtime routes', () => {
 
     const get = await app.inject({
       method: 'GET',
-      url: `/api/runtime-bindings/${create.json().id}`,
+      url: `/api/v1/runtime-bindings/${create.json().id}`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(get.statusCode).toBe(200);
@@ -63,20 +63,20 @@ describe('runtime routes', () => {
 
     const binding = await app.inject({
       method: 'POST',
-      url: '/api/runtime-bindings',
+      url: '/api/v1/runtime-bindings',
       headers: { authorization: `Bearer ${token}` },
       payload: { agentId, runtimeKind: 'native', workspacePath: '/ws' },
     });
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: agentId, participantType: 'agent' },
     });
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/runtime-sessions',
+      url: '/api/v1/runtime-sessions',
       headers: { authorization: `Bearer ${token}` },
       payload: { agentId, conversationId: dm.json().id, runtimeBindingId: binding.json().id },
     });
@@ -84,7 +84,7 @@ describe('runtime routes', () => {
 
     const get = await app.inject({
       method: 'GET',
-      url: `/api/runtime-sessions/${create.json().id}`,
+      url: `/api/v1/runtime-sessions/${create.json().id}`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(get.statusCode).toBe(200);
@@ -98,14 +98,14 @@ describe('runtime routes', () => {
     const { token, agentId } = await setupOwnerAndAgent(app);
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: agentId, participantType: 'agent' },
     });
 
     const invoke = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/runs`,
+      url: `/api/v1/agents/${agentId}/runs`,
       headers: { authorization: `Bearer ${token}` },
       payload: { conversationId: dm.json().id },
     });
@@ -124,7 +124,7 @@ describe('runtime routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/runtime-bindings',
+      url: '/api/v1/runtime-bindings',
       headers: { authorization: `Bearer ${bobToken}` },
       payload: { agentId, runtimeKind: 'native', workspacePath: '/workspaces/assistant' },
     });
@@ -138,7 +138,7 @@ describe('runtime routes', () => {
     const { token, agentId } = await setupOwnerAndAgent(app);
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: agentId, participantType: 'agent' },
     });
@@ -148,7 +148,7 @@ describe('runtime routes', () => {
 
     const invoke = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/runs`,
+      url: `/api/v1/agents/${agentId}/runs`,
       headers: { authorization: `Bearer ${bobToken}` },
       payload: { conversationId: dm.json().id },
     });

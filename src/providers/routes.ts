@@ -44,7 +44,7 @@ function redact(config: ProviderConfigRecord) {
 }
 
 export function registerProviderRoutes(app: FastifyInstance): void {
-  app.post('/api/providers', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/v1/providers', { preHandler: requireAuth }, async (request, reply) => {
     if (!can(request.user!.role as Role, 'provider:manage')) {
       reply.code(403).send({ error: 'forbidden' });
       return;
@@ -54,11 +54,11 @@ export function registerProviderRoutes(app: FastifyInstance): void {
     reply.code(201).send(redact(config));
   });
 
-  app.get('/api/providers', { preHandler: requireAuth }, async (_request, reply) => {
+  app.get('/api/v1/providers', { preHandler: requireAuth }, async (_request, reply) => {
     reply.send(listProviderConfigs(app.db).map(redact));
   });
 
-  app.get('/api/providers/:id/models', { preHandler: requireAuth }, async (request, reply) => {
+  app.get('/api/v1/providers/:id/models', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const config = getProviderConfig(app.db, id);
     if (!config) {

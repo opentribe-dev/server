@@ -9,7 +9,8 @@ import { registerConversationRoutes } from './conversations/routes.js';
 import { registerMessageRoutes } from './messages/routes.js';
 import { registerConversationSummaryRoutes, registerMemoryFactRoutes } from './memory/routes.js';
 import { registerProviderRoutes } from './providers/routes.js';
-import { defaultRespond, type RespondFn } from './runtime/engine.js';
+import { type RespondFn } from './runtime/engine.js';
+import { createProviderRespond } from './providers/respond.js';
 import { registerRuntimeRoutes } from './runtime/routes.js';
 import { ConnectionHub } from './ws/hub.js';
 import { registerWsRoutes } from './ws/routes.js';
@@ -33,15 +34,16 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
   app.decorate('hub', hub);
   await app.register(websocketPlugin);
 
-  app.get('/api/health', async () => ({ ok: true }));
+  app.get('/api/v1/health', async () => ({ ok: true }));
   registerAuthRoutes(app);
   registerAgentRoutes(app);
   registerConversationRoutes(app);
-  registerMessageRoutes(app, hub);
+  const respond = opts.respond ?? createProviderRespond(opts.db);
+  registerMessageRoutes(app, hub, respond);
   registerMemoryFactRoutes(app);
   registerConversationSummaryRoutes(app);
   registerProviderRoutes(app);
-  registerRuntimeRoutes(app, hub, opts.respond ?? defaultRespond);
+  registerRuntimeRoutes(app, hub, respond);
   registerApprovalRoutes(app);
   registerWsRoutes(app, hub);
 

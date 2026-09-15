@@ -25,7 +25,7 @@ const InvokeAgentBodySchema = z.object({
 });
 
 export function registerRuntimeRoutes(app: FastifyInstance, hub: ConnectionHub, respond: RespondFn): void {
-  app.post('/api/runtime-bindings', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/v1/runtime-bindings', { preHandler: requireAuth }, async (request, reply) => {
     const body = CreateBindingBodySchema.parse(request.body);
     const agent = getAgent(app.db, body.agentId);
     if (!agent) {
@@ -39,7 +39,7 @@ export function registerRuntimeRoutes(app: FastifyInstance, hub: ConnectionHub, 
     reply.code(201).send(createRuntimeBinding(app.db, body));
   });
 
-  app.get('/api/runtime-bindings/:id', { preHandler: requireAuth }, async (request, reply) => {
+  app.get('/api/v1/runtime-bindings/:id', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const binding = getRuntimeBinding(app.db, id);
     if (!binding) {
@@ -54,7 +54,7 @@ export function registerRuntimeRoutes(app: FastifyInstance, hub: ConnectionHub, 
     reply.send(binding);
   });
 
-  app.post('/api/runtime-sessions', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/v1/runtime-sessions', { preHandler: requireAuth }, async (request, reply) => {
     const body = CreateSessionBodySchema.parse(request.body);
     if (!getRuntimeBinding(app.db, body.runtimeBindingId)) {
       reply.code(404).send({ error: 'runtime_binding_not_found' });
@@ -72,7 +72,7 @@ export function registerRuntimeRoutes(app: FastifyInstance, hub: ConnectionHub, 
     reply.code(201).send(createRuntimeSession(app.db, body));
   });
 
-  app.get('/api/runtime-sessions/:id', { preHandler: requireAuth }, async (request, reply) => {
+  app.get('/api/v1/runtime-sessions/:id', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const session = getRuntimeSession(app.db, id);
     if (!session) {
@@ -87,7 +87,7 @@ export function registerRuntimeRoutes(app: FastifyInstance, hub: ConnectionHub, 
     reply.send(session);
   });
 
-  app.post('/api/agents/:id/runs', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/v1/agents/:id/runs', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     if (!getAgent(app.db, id)) {
       reply.code(404).send({ error: 'agent_not_found' });

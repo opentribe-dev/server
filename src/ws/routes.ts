@@ -4,7 +4,7 @@ import { listConversationsForParticipant } from '../conversations/repository.js'
 import type { ConnectionHub } from './hub.js';
 
 export function registerWsRoutes(app: FastifyInstance, hub: ConnectionHub): void {
-  app.get('/ws', { websocket: true }, (socket, request) => {
+  app.get('/api/v1/ws', { websocket: true }, (socket, request) => {
     const url = new URL(request.url, 'http://localhost');
     const token = url.searchParams.get('token') ?? '';
     const userId = verifySessionToken(app.db, token);

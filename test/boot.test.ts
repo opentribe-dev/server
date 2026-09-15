@@ -21,12 +21,12 @@ describe('full boot sequence', () => {
 
     const app = await buildApp({ db });
 
-    const health = await app.inject({ method: 'GET', url: '/api/health' });
+    const health = await app.inject({ method: 'GET', url: '/api/v1/health' });
     expect(health.statusCode).toBe(200);
 
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     expect(setup.statusCode).toBe(201);

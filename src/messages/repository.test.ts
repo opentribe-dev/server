@@ -148,7 +148,7 @@ describe('messages repository', () => {
     db.close();
   });
 
-  it('orders messages oldest-first and respects the limit', () => {
+  it('returns the newest messages in chronological order when limited', () => {
     const { db, alice, conversation } = freshDbWithConversation();
     createMessage(db, { conversationId: conversation.id, authorId: alice.id, authorType: 'user', body: 'one', mentions: [], replyToMessageId: null });
     createMessage(db, { conversationId: conversation.id, authorId: alice.id, authorType: 'user', body: 'two', mentions: [], replyToMessageId: null });
@@ -156,8 +156,8 @@ describe('messages repository', () => {
 
     const limited = listMessagesForConversation(db, conversation.id, 2);
     expect(limited).toHaveLength(2);
-    expect(limited[0].body).toBe('one');
-    expect(limited[1].body).toBe('two');
+    expect(limited[0].body).toBe('two');
+    expect(limited[1].body).toBe('three');
     db.close();
   });
 

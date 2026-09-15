@@ -13,9 +13,9 @@ describe('buildApp', () => {
     db.close();
   });
 
-  it('responds to GET /api/health', async () => {
+  it('responds to GET /api/v1/health', async () => {
     const app = await buildApp({ db });
-    const response = await app.inject({ method: 'GET', url: '/api/health' });
+    const response = await app.inject({ method: 'GET', url: '/api/v1/health' });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ ok: true });
     await app.close();

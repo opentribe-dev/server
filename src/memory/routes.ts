@@ -25,7 +25,7 @@ function canManageAgentMemory(role: Role, requesterId: string, agentOwnerId: str
 }
 
 export function registerMemoryFactRoutes(app: FastifyInstance): void {
-  app.post('/api/agents/:agentId/memory-facts', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/api/v1/agents/:agentId/memory-facts', { preHandler: requireAuth }, async (request, reply) => {
     const { agentId } = request.params as { agentId: string };
     const agent = getAgent(app.db, agentId);
     if (!agent) {
@@ -41,7 +41,7 @@ export function registerMemoryFactRoutes(app: FastifyInstance): void {
     reply.code(created ? 201 : 200).send(fact);
   });
 
-  app.get('/api/agents/:agentId/memory-facts', { preHandler: requireAuth }, async (request, reply) => {
+  app.get('/api/v1/agents/:agentId/memory-facts', { preHandler: requireAuth }, async (request, reply) => {
     const { agentId } = request.params as { agentId: string };
     const agent = getAgent(app.db, agentId);
     if (!agent) {
@@ -55,7 +55,7 @@ export function registerMemoryFactRoutes(app: FastifyInstance): void {
     reply.send(listMemoryFactsForAgent(app.db, agentId));
   });
 
-  app.patch('/api/agents/:agentId/memory-facts/:factId', { preHandler: requireAuth }, async (request, reply) => {
+  app.patch('/api/v1/agents/:agentId/memory-facts/:factId', { preHandler: requireAuth }, async (request, reply) => {
     const { agentId, factId } = request.params as { agentId: string; factId: string };
     const agent = getAgent(app.db, agentId);
     if (!agent) {
@@ -75,7 +75,7 @@ export function registerMemoryFactRoutes(app: FastifyInstance): void {
     reply.send(updateMemoryFact(app.db, factId, body));
   });
 
-  app.delete('/api/agents/:agentId/memory-facts/:factId', { preHandler: requireAuth }, async (request, reply) => {
+  app.delete('/api/v1/agents/:agentId/memory-facts/:factId', { preHandler: requireAuth }, async (request, reply) => {
     const { agentId, factId } = request.params as { agentId: string; factId: string };
     const agent = getAgent(app.db, agentId);
     if (!agent) {
@@ -97,7 +97,7 @@ export function registerMemoryFactRoutes(app: FastifyInstance): void {
 }
 
 export function registerConversationSummaryRoutes(app: FastifyInstance): void {
-  app.get('/api/conversations/:id/summary', { preHandler: requireAuth }, async (request, reply) => {
+  app.get('/api/v1/conversations/:id/summary', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const conversation = getConversation(app.db, id);
     if (!conversation) {

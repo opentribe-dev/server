@@ -21,7 +21,7 @@ describe('conversation routes', () => {
   async function setupOwner(app: Awaited<ReturnType<typeof buildApp>>) {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     return { token: setup.json().token as string, userId: setup.json().user.id as string };
@@ -34,7 +34,7 @@ describe('conversation routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: bob.id, participantType: 'user' },
     });
@@ -44,7 +44,7 @@ describe('conversation routes', () => {
 
     const list = await app.inject({
       method: 'GET',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
     });
     expect(list.statusCode).toBe(200);
@@ -59,7 +59,7 @@ describe('conversation routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: 'nonexistent', participantType: 'user' },
     });
@@ -76,7 +76,7 @@ describe('conversation routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/conversations/group',
+      url: '/api/v1/conversations/group',
       headers: { authorization: `Bearer ${token}` },
       payload: {
         name: 'Team',
@@ -97,7 +97,7 @@ describe('conversation routes', () => {
     const app = await buildApp({ db });
     const response = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       payload: { participantId: 'anyone', participantType: 'user' },
     });
     expect(response.statusCode).toBe(401);
@@ -112,7 +112,7 @@ describe('conversation routes', () => {
 
     const group = await app.inject({
       method: 'POST',
-      url: '/api/conversations/group',
+      url: '/api/v1/conversations/group',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Team', participants: [{ participantId: bob.id, participantType: 'user' }] },
     });
@@ -120,7 +120,7 @@ describe('conversation routes', () => {
 
     const add = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${groupId}/members`,
+      url: `/api/v1/conversations/${groupId}/members`,
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: carol.id, participantType: 'user' },
     });
@@ -128,7 +128,7 @@ describe('conversation routes', () => {
 
     const remove = await app.inject({
       method: 'DELETE',
-      url: `/api/conversations/${groupId}/members/${carol.id}`,
+      url: `/api/v1/conversations/${groupId}/members/${carol.id}`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(remove.statusCode).toBe(204);
@@ -145,7 +145,7 @@ describe('conversation routes', () => {
 
     const group = await app.inject({
       method: 'POST',
-      url: '/api/conversations/group',
+      url: '/api/v1/conversations/group',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Team', participants: [{ participantId: bob.id, participantType: 'user' }] },
     });
@@ -153,7 +153,7 @@ describe('conversation routes', () => {
 
     const add = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${groupId}/members`,
+      url: `/api/v1/conversations/${groupId}/members`,
       headers: { authorization: `Bearer ${bobToken}` },
       payload: { participantId: carol.id, participantType: 'user' },
     });
@@ -168,7 +168,7 @@ describe('conversation routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: userId, participantType: 'user' },
     });
@@ -185,7 +185,7 @@ describe('conversation routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/conversations/group',
+      url: '/api/v1/conversations/group',
       headers: { authorization: `Bearer ${token}` },
       payload: {
         name: 'Team',
@@ -210,7 +210,7 @@ describe('conversation routes', () => {
 
     const group = await app.inject({
       method: 'POST',
-      url: '/api/conversations/group',
+      url: '/api/v1/conversations/group',
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Team', participants: [{ participantId: bob.id, participantType: 'user' }] },
     });
@@ -218,7 +218,7 @@ describe('conversation routes', () => {
 
     const readd = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${groupId}/members`,
+      url: `/api/v1/conversations/${groupId}/members`,
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: bob.id, participantType: 'user' },
     });
@@ -235,7 +235,7 @@ describe('conversation routes', () => {
 
     const first = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: bob.id, participantType: 'user' },
     });
@@ -243,7 +243,7 @@ describe('conversation routes', () => {
 
     const second = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: bob.id, participantType: 'user' },
     });
@@ -252,7 +252,7 @@ describe('conversation routes', () => {
 
     const list = await app.inject({
       method: 'GET',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
     });
     expect(list.json()).toHaveLength(1);
@@ -268,14 +268,14 @@ describe('conversation routes', () => {
 
     const dm = await app.inject({
       method: 'POST',
-      url: '/api/conversations',
+      url: '/api/v1/conversations',
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: bob.id, participantType: 'user' },
     });
 
     const add = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${dm.json().id}/members`,
+      url: `/api/v1/conversations/${dm.json().id}/members`,
       headers: { authorization: `Bearer ${token}` },
       payload: { participantId: carol.id, participantType: 'user' },
     });

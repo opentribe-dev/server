@@ -40,7 +40,7 @@ describe('messaging end-to-end: dm/group creation, persistence, WS delivery, rec
   it('proves the full messaging path: group creation, message persistence, live WS delivery, and reconnect/replay across a disconnect', async () => {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'alice@example.com', displayName: 'Alice', password: 'super-secret-1' },
     });
     const aliceToken = setup.json().token as string;
@@ -51,20 +51,20 @@ describe('messaging end-to-end: dm/group creation, persistence, WS delivery, rec
 
     const group = await app.inject({
       method: 'POST',
-      url: '/api/conversations/group',
+      url: '/api/v1/conversations/group',
       headers: { authorization: `Bearer ${aliceToken}` },
       payload: { name: 'Launch planning', participants: [{ participantId: bob.id, participantType: 'user' }] },
     });
     expect(group.statusCode).toBe(201);
     const conversationId = group.json().id as string;
 
-    const bobSocket = new WebSocket(`ws://${baseUrl}/ws?token=${bobToken}`);
+    const bobSocket = new WebSocket(`ws://${baseUrl}/api/v1/ws?token=${bobToken}`);
     await waitForOpen(bobSocket);
 
     const firstMessagePromise = waitForMessage(bobSocket);
     const firstPost = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${aliceToken}` },
       payload: { body: 'kickoff is monday' },
     });
@@ -79,7 +79,7 @@ describe('messaging end-to-end: dm/group creation, persistence, WS delivery, rec
 
     const secondPost = await app.inject({
       method: 'POST',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${aliceToken}` },
       payload: { body: 'moved to tuesday, sent while bob was offline' },
     });
@@ -87,12 +87,12 @@ describe('messaging end-to-end: dm/group creation, persistence, WS delivery, rec
 
     const list = await app.inject({
       method: 'GET',
-      url: `/api/conversations/${conversationId}/messages`,
+      url: `/api/v1/conversations/${conversationId}/messages`,
       headers: { authorization: `Bearer ${aliceToken}` },
     });
     expect(list.json()).toHaveLength(2);
 
-    const bobReconnect = new WebSocket(`ws://${baseUrl}/ws?token=${bobToken}&sinceSeq=${lastSeenSeq}`);
+    const bobReconnect = new WebSocket(`ws://${baseUrl}/api/v1/ws?token=${bobToken}&sinceSeq=${lastSeenSeq}`);
     const replayed = await waitForMessage(bobReconnect);
     expect(replayed.type).toBe('message.created');
     expect((replayed.payload as { body: string }).body).toBe('moved to tuesday, sent while bob was offline');

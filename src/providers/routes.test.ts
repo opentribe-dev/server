@@ -22,7 +22,7 @@ describe('provider routes', () => {
   async function setupOwner(app: Awaited<ReturnType<typeof buildApp>>) {
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     return setup.json().token as string;
@@ -34,7 +34,7 @@ describe('provider routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/providers',
+      url: '/api/v1/providers',
       headers: { authorization: `Bearer ${token}` },
       payload: { id: 'anthropic-default', kind: 'anthropic', apiKey: 'sk-secret' },
     });
@@ -53,7 +53,7 @@ describe('provider routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/providers',
+      url: '/api/v1/providers',
       headers: { authorization: `Bearer ${memberToken}` },
       payload: { id: 'anthropic-default', kind: 'anthropic', apiKey: 'sk-secret' },
     });
@@ -67,12 +67,12 @@ describe('provider routes', () => {
     const token = await setupOwner(app);
     await app.inject({
       method: 'POST',
-      url: '/api/providers',
+      url: '/api/v1/providers',
       headers: { authorization: `Bearer ${token}` },
       payload: { id: 'anthropic-default', kind: 'anthropic', apiKey: 'sk-secret' },
     });
 
-    const list = await app.inject({ method: 'GET', url: '/api/providers', headers: { authorization: `Bearer ${token}` } });
+    const list = await app.inject({ method: 'GET', url: '/api/v1/providers', headers: { authorization: `Bearer ${token}` } });
     expect(list.json()).toHaveLength(1);
     expect(list.json()[0].apiKey).toBeUndefined();
 
@@ -85,7 +85,7 @@ describe('provider routes', () => {
 
     const models = await app.inject({
       method: 'GET',
-      url: '/api/providers/nonexistent/models',
+      url: '/api/v1/providers/nonexistent/models',
       headers: { authorization: `Bearer ${token}` },
     });
     expect(models.statusCode).toBe(404);
@@ -93,19 +93,19 @@ describe('provider routes', () => {
     await app.close();
   });
 
-  it('proxies GET /api/providers/:id/models for an anthropic provider (static list, no network)', async () => {
+  it('proxies GET /api/v1/providers/:id/models for an anthropic provider (static list, no network)', async () => {
     const app = await buildApp({ db });
     const token = await setupOwner(app);
     await app.inject({
       method: 'POST',
-      url: '/api/providers',
+      url: '/api/v1/providers',
       headers: { authorization: `Bearer ${token}` },
       payload: { id: 'anthropic-default', kind: 'anthropic', apiKey: 'sk-secret' },
     });
 
     const models = await app.inject({
       method: 'GET',
-      url: '/api/providers/anthropic-default/models',
+      url: '/api/v1/providers/anthropic-default/models',
       headers: { authorization: `Bearer ${token}` },
     });
     expect(models.statusCode).toBe(200);
@@ -120,7 +120,7 @@ describe('provider routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/providers',
+      url: '/api/v1/providers',
       headers: { authorization: `Bearer ${token}` },
       payload: { id: 'anthropic-default', kind: 'anthropic' },
     });
@@ -135,7 +135,7 @@ describe('provider routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/providers',
+      url: '/api/v1/providers',
       headers: { authorization: `Bearer ${token}` },
       payload: { id: 'compat-default', kind: 'openai-compatible', apiKey: 'sk-secret' },
     });
@@ -150,7 +150,7 @@ describe('provider routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/providers',
+      url: '/api/v1/providers',
       headers: { authorization: `Bearer ${token}` },
       payload: { id: 'compat-default', kind: 'openai-compatible', apiKey: 'sk-secret', baseUrl: 'https://my-local-server/v1' },
     });
@@ -165,7 +165,7 @@ describe('provider routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/providers',
+      url: '/api/v1/providers',
       headers: { authorization: `Bearer ${token}` },
       payload: { id: 'ollama-default', kind: 'ollama' },
     });
@@ -179,7 +179,7 @@ describe('provider routes', () => {
     const token = await setupOwner(app);
     await app.inject({
       method: 'POST',
-      url: '/api/providers',
+      url: '/api/v1/providers',
       headers: { authorization: `Bearer ${token}` },
       payload: { id: 'openai-default', kind: 'openai', apiKey: 'sk-secret' },
     });
@@ -193,7 +193,7 @@ describe('provider routes', () => {
 
     const models = await app.inject({
       method: 'GET',
-      url: '/api/providers/openai-default/models',
+      url: '/api/v1/providers/openai-default/models',
       headers: { authorization: `Bearer ${token}` },
     });
     expect(models.statusCode).toBe(502);

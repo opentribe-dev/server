@@ -56,7 +56,7 @@ describe('approval routes', () => {
     const app = await buildApp({ db });
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'admin@example.com', displayName: 'Admin', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
@@ -64,14 +64,14 @@ describe('approval routes', () => {
 
     const list = await app.inject({
       method: 'GET',
-      url: '/api/approvals',
+      url: '/api/v1/approvals',
       headers: { authorization: `Bearer ${token}` },
     });
     expect(list.json()).toHaveLength(1);
 
     const respond = await app.inject({
       method: 'POST',
-      url: `/api/approvals/${approval.id}/respond`,
+      url: `/api/v1/approvals/${approval.id}/respond`,
       headers: { authorization: `Bearer ${token}` },
       payload: { decision: 'approve' },
     });
@@ -85,7 +85,7 @@ describe('approval routes', () => {
     const app = await buildApp({ db });
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'admin@example.com', displayName: 'Admin', password: 'super-secret-1' },
     });
     const token = setup.json().token as string;
@@ -93,13 +93,13 @@ describe('approval routes', () => {
 
     await app.inject({
       method: 'POST',
-      url: `/api/approvals/${approval.id}/respond`,
+      url: `/api/v1/approvals/${approval.id}/respond`,
       headers: { authorization: `Bearer ${token}` },
       payload: { decision: 'approve' },
     });
     const second = await app.inject({
       method: 'POST',
-      url: `/api/approvals/${approval.id}/respond`,
+      url: `/api/v1/approvals/${approval.id}/respond`,
       headers: { authorization: `Bearer ${token}` },
       payload: { decision: 'deny' },
     });

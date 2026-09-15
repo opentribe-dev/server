@@ -16,12 +16,12 @@ describe('auth routes', () => {
     db.close();
   });
 
-  it('allows the first /api/auth/setup call and rejects the second with 409', async () => {
+  it('allows the first /api/v1/auth/setup call and rejects the second with 409', async () => {
     const app = await buildApp({ db });
 
     const first = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     expect(first.statusCode).toBe(201);
@@ -30,7 +30,7 @@ describe('auth routes', () => {
 
     const second = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'other@example.com', displayName: 'Other', password: 'super-secret-2' },
     });
     expect(second.statusCode).toBe(409);
@@ -42,20 +42,20 @@ describe('auth routes', () => {
     const app = await buildApp({ db });
     await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
 
     const badLogin = await app.inject({
       method: 'POST',
-      url: '/api/auth/login',
+      url: '/api/v1/auth/login',
       payload: { email: 'owner@example.com', password: 'wrong-password' },
     });
     expect(badLogin.statusCode).toBe(401);
 
     const goodLogin = await app.inject({
       method: 'POST',
-      url: '/api/auth/login',
+      url: '/api/v1/auth/login',
       payload: { email: 'owner@example.com', password: 'super-secret-1' },
     });
     expect(goodLogin.statusCode).toBe(200);
@@ -69,7 +69,7 @@ describe('auth routes', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/auth/login',
+      url: '/api/v1/auth/login',
       payload: { email: 'not-an-email', password: 'x' },
     });
     expect(response.statusCode).toBe(400);
@@ -80,21 +80,21 @@ describe('auth routes', () => {
     await app.close();
   });
 
-  it('requires a valid bearer token for /api/auth/me', async () => {
+  it('requires a valid bearer token for /api/v1/auth/me', async () => {
     const app = await buildApp({ db });
     const setup = await app.inject({
       method: 'POST',
-      url: '/api/auth/setup',
+      url: '/api/v1/auth/setup',
       payload: { email: 'owner@example.com', displayName: 'Owner', password: 'super-secret-1' },
     });
     const { token } = setup.json();
 
-    const unauthenticated = await app.inject({ method: 'GET', url: '/api/auth/me' });
+    const unauthenticated = await app.inject({ method: 'GET', url: '/api/v1/auth/me' });
     expect(unauthenticated.statusCode).toBe(401);
 
     const authenticated = await app.inject({
       method: 'GET',
-      url: '/api/auth/me',
+      url: '/api/v1/auth/me',
       headers: { authorization: `Bearer ${token}` },
     });
     expect(authenticated.statusCode).toBe(200);
